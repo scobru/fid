@@ -12,14 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <!-- Vendor Scripts: Tailwind CSS & Zen SEA -->
+    <!-- Tailwind CSS (Local Vendor) -->
     <script src="vendor/tailwind.js"></script>
-    <script src="vendor/zen.min.js"></script>
-    <script>
-        if (typeof tailwind === 'undefined') {
-            document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
-        }
-    </script>
     <script>
         tailwind.config = {
             theme: {
@@ -66,8 +60,9 @@
             font-weight: 500;
             transition: all 0.2s ease;
             display: inline-flex;
-            items-center: center;
+            align-items: center;
             justify-content: space-between;
+            cursor: pointer;
         }
         .btn-anthro:hover {
             background-color: #2a2a2a;
@@ -80,6 +75,7 @@
             padding: 0.5rem 1rem;
             font-weight: 500;
             transition: all 0.2s ease;
+            cursor: pointer;
         }
         .btn-anthro-outline:hover {
             border-color: #141414;
@@ -168,11 +164,11 @@
 
                 <!-- Actions -->
                 <div class="flex flex-col sm:flex-row gap-3 pt-4">
-                    <button id="ssoAuthorizeBtn" onclick="handleSsoAuthorize()" class="btn-anthro flex-1 text-sm justify-between">
+                    <button id="ssoAuthorizeBtn" class="btn-anthro flex-1 text-sm justify-between">
                         <span>Authorize Access</span>
                         <span class="font-mono">→</span>
                     </button>
-                    <button onclick="handleSsoCancel()" class="btn-anthro-outline text-sm">
+                    <button id="ssoCancelBtn" class="btn-anthro-outline text-sm">
                         Cancel
                     </button>
                 </div>
@@ -194,17 +190,17 @@
                     FID è il protocollo di autenticazione crittografica e Single Sign-On (SSO) basato su Zen SEA per applicazioni ActivityPub, istanze TuneCamp e la rete decentralizzata P2P.
                 </p>
                 <div class="pt-2 flex flex-wrap gap-3">
-                    <button onclick="exportIdentityBackup()" class="btn-anthro text-xs">
+                    <button id="exportIdentityBackupBtn" class="btn-anthro text-xs">
                         <span>Export Backup JSON</span>
                         <span class="ml-2 font-mono">→</span>
                     </button>
-                    <button onclick="generateRandomKeypair()" class="btn-anthro-outline text-xs">
+                    <button id="generateRandomKeysBtn" class="btn-anthro-outline text-xs">
                         Generate Random Keys
                     </button>
                 </div>
             </div>
 
-            <!-- 3 Column Anthropic-Style Card Layout (Matching Screenshot) -->
+            <!-- 3 Column Anthropic-Style Card Layout -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 <!-- Card 1: User+Pass Pair Creation -->
@@ -218,7 +214,7 @@
                             Deriva la tua coppia di chiavi Zen SEA in modo deterministico partendo dal tuo username e passphrase segreta.
                         </p>
 
-                        <form id="userPassForm" onsubmit="handleUserPassSubmit(event)" class="space-y-3 pt-2">
+                        <form id="userPassForm" class="space-y-3 pt-2">
                             <div>
                                 <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
                                 <input type="text" id="userInput" required placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
@@ -243,7 +239,7 @@
                         </div>
                         <div class="flex justify-between text-slate-700">
                             <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">METHOD</span>
-                            <span class="text-anthro-dark font-medium">PBKDF2 SHA-256</span>
+                            <span class="text-anthro-dark font-medium">Zen SEA (Gun/PBKDF2)</span>
                         </div>
                     </div>
                 </div>
@@ -264,20 +260,20 @@
                                 <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Public Key (zenPubKey)</label>
                                 <div class="relative">
                                     <input type="text" id="dashZenPubKey" readonly class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark pr-8 focus:outline-none select-all" value="-">
-                                    <button onclick="copyToClipboard('dashZenPubKey')" class="absolute right-2 top-2 text-anthro-muted hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
+                                    <button id="copyZenPubKeyBtn" class="absolute right-2 top-2 text-anthro-muted hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
                                 </div>
                             </div>
 
                             <div>
                                 <div class="flex justify-between items-center mb-1">
                                     <label class="block text-[10px] font-mono uppercase text-anthro-muted">Private Key (priv)</label>
-                                    <button onclick="togglePrivateKeyVisibility()" class="text-[10px] font-mono text-anthro-dark underline">
+                                    <button id="togglePrivateKeyVisibilityBtn" class="text-[10px] font-mono text-anthro-dark underline">
                                         <span id="privToggleText">Mostra</span>
                                     </button>
                                 </div>
                                 <div class="relative">
                                     <input type="password" id="dashMasterPrivKey" readonly class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark pr-8 focus:outline-none select-all" value="-">
-                                    <button onclick="copyToClipboard('dashMasterPrivKey')" class="absolute right-2 top-2 text-anthro-muted hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
+                                    <button id="copyMasterPrivKeyBtn" class="absolute right-2 top-2 text-anthro-muted hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -311,7 +307,7 @@
                                 <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Broadcast Ping Message</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="p2pPingMsg" value="Handshake P2P FID Identity Node" class="flex-1 bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none">
-                                    <button onclick="sendP2pPing()" class="btn-anthro-outline text-xs">Ping</button>
+                                    <button id="sendP2pPingBtn" class="btn-anthro-outline text-xs">Ping</button>
                                 </div>
                             </div>
 
@@ -335,7 +331,7 @@
 
             </div>
 
-            <!-- SECTION: LINKED INSTANCES MANAGER (Matching Editorial Style) -->
+            <!-- SECTION: LINKED INSTANCES MANAGER -->
             <div id="instances-section" class="space-y-6 pt-6">
                 <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-anthro-dark/10 pb-4">
                     <div class="space-y-1">
@@ -345,7 +341,7 @@
                         </h2>
                         <p class="text-anthro-muted text-sm">Passaporti crittografici collegati alla tua identità Zen globale.</p>
                     </div>
-                    <button onclick="openLinkInstanceModal()" class="btn-anthro text-xs">
+                    <button id="openLinkInstanceModalBtn" class="btn-anthro text-xs">
                         <span>Link New Instance</span>
                         <span class="ml-2 font-mono">+</span>
                     </button>
@@ -381,11 +377,11 @@
                     <div class="grid grid-cols-2 gap-4 text-xs font-mono">
                         <div>
                             <label class="block text-[10px] uppercase text-anthro-muted mb-1 font-sans">Target Domain</label>
-                            <input type="text" id="apDomainInput" value="tunecamp.org" oninput="updateApDerivation()" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
+                            <input type="text" id="apDomainInput" value="tunecamp.org" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-[10px] uppercase text-anthro-muted mb-1 font-sans">Username</label>
-                            <input type="text" id="apUserInput" value="alice" oninput="updateApDerivation()" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
+                            <input type="text" id="apUserInput" value="alice" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
                         </div>
                     </div>
 
@@ -428,7 +424,7 @@
                         </div>
                     </div>
 
-                    <button onclick="simulatePassportHandshake()" class="w-full btn-anthro text-xs">
+                    <button id="simulatePassportHandshakeBtn" class="w-full btn-anthro text-xs">
                         <span>Generate Passport Payload</span>
                         <span class="font-mono">→</span>
                     </button>
@@ -440,7 +436,7 @@
 
             </div>
 
-            <!-- SSO Token Payload Inspector (Full Width Bottom Card) -->
+            <!-- SSO Token Payload Inspector -->
             <div class="anthro-card p-8 space-y-4">
                 <div class="flex justify-between items-center border-b border-anthro-dark/10 pb-4">
                     <div>
@@ -449,7 +445,7 @@
                             FidSsoToken Payload Structure
                         </h2>
                     </div>
-                    <button onclick="generateSsoTokenPreview()" class="btn-anthro-outline text-xs">
+                    <button id="generateSsoTokenPreviewBtn" class="btn-anthro-outline text-xs">
                         Update Payload
                     </button>
                 </div>
@@ -470,17 +466,17 @@
                 <h3 class="font-serif font-medium text-xl text-anthro-dark">
                     Link New TuneCamp Instance
                 </h3>
-                <button onclick="closeLinkInstanceModal()" class="text-anthro-muted hover:text-anthro-dark">
+                <button id="closeLinkInstanceModalBtn" class="text-anthro-muted hover:text-anthro-dark">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <!-- Tab Switcher -->
             <div class="flex border-b border-anthro-dark/10 text-xs font-mono">
-                <button id="modalTabSignBtn" onclick="switchLinkTab('sign')" class="px-4 py-2 border-b-2 border-anthro-dark text-anthro-dark font-semibold">
+                <button id="modalTabSignBtn" class="px-4 py-2 border-b-2 border-anthro-dark text-anthro-dark font-semibold">
                     Sign Challenge
                 </button>
-                <button id="modalTabImportBtn" onclick="switchLinkTab('import')" class="px-4 py-2 border-b-2 border-transparent text-anthro-muted hover:text-anthro-dark">
+                <button id="modalTabImportBtn" class="px-4 py-2 border-b-2 border-transparent text-anthro-muted hover:text-anthro-dark">
                     Import Passport JSON
                 </button>
             </div>
@@ -492,7 +488,7 @@
                     <label class="block font-mono text-[10px] uppercase text-anthro-muted mb-1">Challenge JSON</label>
                     <textarea id="modalChallengeInput" rows="4" placeholder='{"instanceDomain": "sudorecords.scobrudot.dev", "username": "alice", "nonce": "abc123nonce"}' class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl p-3 font-mono text-xs focus:outline-none focus:border-anthro-dark"></textarea>
                 </div>
-                <button onclick="handleModalSignChallenge()" class="btn-anthro w-full text-xs justify-between">
+                <button id="modalSignChallengeBtn" class="btn-anthro w-full text-xs justify-between">
                     <span>Sign Challenge & Issue Passport</span>
                     <span class="font-mono">→</span>
                 </button>
@@ -505,7 +501,7 @@
                     <label class="block font-mono text-[10px] uppercase text-anthro-muted mb-1">Passport JSON</label>
                     <textarea id="modalPassportImportInput" rows="4" placeholder='{"instanceDomain": "sudorecords.scobrudot.dev", "localUsername": "alice", "zenPubKey": "QmZen...", "passportSignature": "..."}' class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl p-3 font-mono text-xs focus:outline-none focus:border-anthro-dark"></textarea>
                 </div>
-                <button onclick="handleModalImportPassport()" class="btn-anthro w-full text-xs justify-between">
+                <button id="modalImportPassportBtn" class="btn-anthro w-full text-xs justify-between">
                     <span>Verify & Save Instance</span>
                     <span class="font-mono">→</span>
                 </button>
@@ -535,7 +531,10 @@
     </footer>
 
     <!-- Core FID Web Script -->
-    <script>
+    <script type="module">
+        import Zen from './vendor/zen.min.js';
+        window.Zen = Zen;
+
         // State
         let currentAlias = "anonymous";
         let currentKeys = { pub: '', priv: '', epub: '', epriv: '' };
@@ -586,14 +585,12 @@
 
         async function deriveDeterministicPair(user, pass) {
             const seedStr = user + ':' + pass;
-            const ZenObj = window.Zen;
-            if (ZenObj && typeof ZenObj.pair === 'function') {
+            if (Zen && typeof Zen.pair === 'function') {
                 return new Promise((resolve) => {
-                    ZenObj.pair((pair) => {
+                    Zen.pair((pair) => {
                         if (pair && pair.pub) {
                             resolve(pair);
                         } else {
-                            // Fallback
                             const pubSeed = sha256Hex(`fid:zen:pub:${user.toLowerCase()}`);
                             const privSeed = sha256Hex(`fid:zen:priv:${user.toLowerCase()}`);
                             resolve({
@@ -643,7 +640,6 @@
                     linkedInstances = [];
                 }
             } else {
-                // Demo linked instance matching Anthropic card layout
                 linkedInstances = [
                     {
                         instanceDomain: "sudorecords.scobrudot.dev",
@@ -666,6 +662,8 @@
         function renderLinkedInstances() {
             const grid = document.getElementById("linkedInstancesGrid");
             const emptyBox = document.getElementById("emptyInstancesBox");
+
+            if (!grid || !emptyBox) return;
 
             grid.innerHTML = "";
 
@@ -700,16 +698,21 @@
                     </div>
 
                     <div class="pt-4 border-t border-anthro-dark/10 flex justify-between items-center">
-                        <button onclick="verifyInstanceBackend('${inst.instanceDomain}', '${inst.localUsername}', ${index})" class="text-xs font-mono font-medium text-anthro-dark hover:underline">
+                        <button id="verify-inst-${index}" class="text-xs font-mono font-medium text-anthro-dark hover:underline">
                             Verify →
                         </button>
                         <div class="flex gap-3">
-                            <button onclick="copyPassportJson(${index})" class="text-xs font-mono text-anthro-muted hover:text-anthro-dark">Copy</button>
-                            <button onclick="unlinkInstance(${index})" class="text-xs font-mono text-rose-700 hover:underline">Unlink</button>
+                            <button id="copy-inst-${index}" class="text-xs font-mono text-anthro-muted hover:text-anthro-dark">Copy</button>
+                            <button id="unlink-inst-${index}" class="text-xs font-mono text-rose-700 hover:underline">Unlink</button>
                         </div>
                     </div>
                 `;
                 grid.appendChild(card);
+
+                // Add event listeners for dynamic item buttons
+                document.getElementById(`verify-inst-${index}`)?.addEventListener('click', () => verifyInstanceBackend(inst.instanceDomain, inst.localUsername, index));
+                document.getElementById(`copy-inst-${index}`)?.addEventListener('click', () => copyPassportJson(index));
+                document.getElementById(`unlink-inst-${index}`)?.addEventListener('click', () => unlinkInstance(index));
             });
         }
 
@@ -755,11 +758,11 @@
 
         // Modal Controls & Handlers
         function openLinkInstanceModal() {
-            document.getElementById("linkInstanceModal").classList.remove("hidden");
+            document.getElementById("linkInstanceModal")?.classList.remove("hidden");
         }
 
         function closeLinkInstanceModal() {
-            document.getElementById("linkInstanceModal").classList.add("hidden");
+            document.getElementById("linkInstanceModal")?.classList.add("hidden");
         }
 
         function switchLinkTab(tab) {
@@ -767,6 +770,8 @@
             const importBtn = document.getElementById("modalTabImportBtn");
             const signContent = document.getElementById("tabSignContent");
             const importContent = document.getElementById("tabImportContent");
+
+            if (!signBtn || !importBtn || !signContent || !importContent) return;
 
             if (tab === 'sign') {
                 signBtn.className = "px-4 py-2 border-b-2 border-anthro-dark text-anthro-dark font-semibold";
@@ -782,7 +787,7 @@
         }
 
         async function handleModalSignChallenge() {
-            const raw = document.getElementById("modalChallengeInput").value.trim();
+            const raw = document.getElementById("modalChallengeInput")?.value.trim();
             if (!raw) return;
 
             try {
@@ -814,7 +819,7 @@
         }
 
         function handleModalImportPassport() {
-            const raw = document.getElementById("modalPassportImportInput").value.trim();
+            const raw = document.getElementById("modalPassportImportInput")?.value.trim();
             if (!raw) return;
 
             try {
@@ -856,9 +861,9 @@
         }
 
         async function handleUserPassSubmit(e) {
-            e.preventDefault();
-            const user = document.getElementById("userInput").value.trim();
-            const pass = document.getElementById("passInput").value.trim();
+            if (e) e.preventDefault();
+            const user = document.getElementById("userInput")?.value.trim();
+            const pass = document.getElementById("passInput")?.value.trim();
 
             if (!user || !pass) {
                 alert("Enter both username and passphrase!");
@@ -880,11 +885,15 @@
         }
 
         function updateDashboardUI() {
-            document.getElementById("userSessionBadge").textContent = `@${currentAlias}`;
-            document.getElementById("dashZenPubKey").value = currentKeys.pub;
-            document.getElementById("dashMasterPrivKey").value = currentKeys.priv;
+            const badge = document.getElementById("userSessionBadge");
+            const pubInput = document.getElementById("dashZenPubKey");
+            const privInput = document.getElementById("dashMasterPrivKey");
+            const userIn = document.getElementById("userInput");
 
-            document.getElementById("userInput").value = currentAlias !== "anonymous" ? currentAlias : "";
+            if (badge) badge.textContent = `@${currentAlias}`;
+            if (pubInput) pubInput.value = currentKeys.pub;
+            if (privInput) privInput.value = currentKeys.priv;
+            if (userIn) userIn.value = currentAlias !== "anonymous" ? currentAlias : "";
 
             updateApDerivation();
             generateSsoTokenPreview();
@@ -893,6 +902,7 @@
         function togglePrivateKeyVisibility() {
             const input = document.getElementById("dashMasterPrivKey");
             const toggleText = document.getElementById("privToggleText");
+            if (!input || !toggleText) return;
             if (input.type === "password") {
                 input.type = "text";
                 toggleText.textContent = "Nascondi";
@@ -931,6 +941,7 @@
             const logBox = document.getElementById("relayLogBox");
 
             function logRelay(msg, type = "info") {
+                if (!logBox) return;
                 const line = document.createElement("div");
                 const time = new Date().toLocaleTimeString();
                 let color = "text-white/80";
@@ -947,12 +958,15 @@
                 wsRelay = new WebSocket(RELAY_URL);
 
                 wsRelay.onopen = () => {
-                    dot.className = "w-2 h-2 rounded-full bg-emerald-600";
-                    text.className = "text-anthro-dark font-medium";
-                    text.textContent = "Connected";
-
-                    widgetState.className = "text-emerald-800 font-medium";
-                    widgetState.textContent = "Connected (Active)";
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-600";
+                    if (text) {
+                        text.className = "text-anthro-dark font-medium";
+                        text.textContent = "Connected";
+                    }
+                    if (widgetState) {
+                        widgetState.className = "text-emerald-800 font-medium";
+                        widgetState.textContent = "Connected (Active)";
+                    }
 
                     logRelay("P2P connection established with delay.scobrudot.dev", "success");
 
@@ -973,19 +987,22 @@
                 };
 
                 wsRelay.onerror = () => {
-                    dot.className = "w-2 h-2 rounded-full bg-amber-600";
-                    text.className = "text-anthro-dark font-medium";
-                    text.textContent = "Fallback Mode";
-
-                    widgetState.className = "text-amber-800 font-medium";
-                    widgetState.textContent = "Local Fallback";
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-600";
+                    if (text) {
+                        text.className = "text-anthro-dark font-medium";
+                        text.textContent = "Fallback Mode";
+                    }
+                    if (widgetState) {
+                        widgetState.className = "text-amber-800 font-medium";
+                        widgetState.textContent = "Local Fallback";
+                    }
 
                     logRelay("Relay unavailable, active local fallback.", "error");
                 };
 
                 wsRelay.onclose = () => {
-                    dot.className = "w-2 h-2 rounded-full bg-slate-400";
-                    text.textContent = "Disconnected";
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-slate-400";
+                    if (text) text.textContent = "Disconnected";
                 };
 
             } catch (err) {
@@ -994,7 +1011,7 @@
         }
 
         function sendP2pPing() {
-            const msgInput = document.getElementById("p2pPingMsg").value.trim();
+            const msgInput = document.getElementById("p2pPingMsg")?.value.trim();
             if (!msgInput) return;
 
             const payload = {
@@ -1013,31 +1030,39 @@
             }
 
             const logBox = document.getElementById("relayLogBox");
-            const line = document.createElement("div");
-            line.className = "text-amber-200";
-            line.textContent = `[Outbound P2P] ${JSON.stringify(payload)}`;
-            logBox.appendChild(line);
-            logBox.scrollTop = logBox.scrollHeight;
+            if (logBox) {
+                const line = document.createElement("div");
+                line.className = "text-amber-200";
+                line.textContent = `[Outbound P2P] ${JSON.stringify(payload)}`;
+                logBox.appendChild(line);
+                logBox.scrollTop = logBox.scrollHeight;
+            }
         }
 
         // ActivityPub Sandbox
         async function updateApDerivation() {
-            const domain = document.getElementById("apDomainInput").value.trim() || "tunecamp.org";
-            const username = document.getElementById("apUserInput").value.trim() || (currentAlias !== "anonymous" ? currentAlias : "alice");
+            const domainEl = document.getElementById("apDomainInput");
+            const userEl = document.getElementById("apUserInput");
+            const handleEl = document.getElementById("apWebfingerHandle");
+            const uriEl = document.getElementById("apActorUri");
+            const seedEl = document.getElementById("apSeedHex");
 
-            document.getElementById("apWebfingerHandle").textContent = `@${username.toLowerCase()}@${domain.toLowerCase()}`;
-            document.getElementById("apActorUri").textContent = `https://${domain.toLowerCase()}/users/${username.toLowerCase()}`;
+            const domain = domainEl?.value.trim() || "tunecamp.org";
+            const username = userEl?.value.trim() || (currentAlias !== "anonymous" ? currentAlias : "alice");
 
-            if (currentKeys.priv) {
+            if (handleEl) handleEl.textContent = `@${username.toLowerCase()}@${domain.toLowerCase()}`;
+            if (uriEl) uriEl.textContent = `https://${domain.toLowerCase()}/users/${username.toLowerCase()}`;
+
+            if (currentKeys.priv && seedEl) {
                 const seedHex = await computePbkdf2Bits(currentKeys.priv, `fid:activitypub:${domain.toLowerCase()}:${username.toLowerCase()}`);
-                document.getElementById("apSeedHex").textContent = seedHex;
+                seedEl.textContent = seedHex;
             }
         }
 
         // Passport Handshake Simulation
         async function simulatePassportHandshake() {
-            const instanceDomain = document.getElementById("passportInstance").value.trim();
-            const username = document.getElementById("passportUsername").value.trim();
+            const instanceDomain = document.getElementById("passportInstance")?.value.trim();
+            const username = document.getElementById("passportUsername")?.value.trim();
 
             if (!instanceDomain || !username) return;
 
@@ -1054,15 +1079,17 @@
                 publicDataEndpoint: `https://${instanceDomain}/api/auth/zen/user/${username}/public`
             };
 
-            document.getElementById("passportJsonText").textContent = JSON.stringify(passport, null, 2);
-            document.getElementById("passportResultBox").classList.remove("hidden");
+            const box = document.getElementById("passportJsonText");
+            const container = document.getElementById("passportResultBox");
+            if (box) box.textContent = JSON.stringify(passport, null, 2);
+            if (container) container.classList.remove("hidden");
             showToast("Passport payload generated");
         }
 
         // SSO Token Generator Preview
         async function generateSsoTokenPreview() {
-            const domain = document.getElementById("apDomainInput").value.trim() || "sudorecords.scobrudot.dev";
-            const username = document.getElementById("apUserInput").value.trim() || (currentAlias !== "anonymous" ? currentAlias : "alice");
+            const domain = document.getElementById("apDomainInput")?.value.trim() || "sudorecords.scobrudot.dev";
+            const username = document.getElementById("apUserInput")?.value.trim() || (currentAlias !== "anonymous" ? currentAlias : "alice");
 
             const passportSig = "sig_hmac_" + (await sha256Hex(`${domain}:${username}:${currentKeys.pub}:${Date.now()}`)).substring(0, 32);
             const tokenSig = "sig_sso_" + (await sha256Hex(`sso:${domain}:${currentKeys.pub}`)).substring(0, 32);
@@ -1085,7 +1112,8 @@
                 signature: tokenSig
             };
 
-            document.getElementById("ssoTokenJsonPreview").textContent = JSON.stringify(ssoToken, null, 2);
+            const prev = document.getElementById("ssoTokenJsonPreview");
+            if (prev) prev.textContent = JSON.stringify(ssoToken, null, 2);
         }
 
         // SSO Authorize Flow (Mode A)
@@ -1096,13 +1124,18 @@
             const instanceDomain = urlParams.get('instanceDomain');
 
             if (clientId || redirectUri || instanceDomain) {
-                document.getElementById("ssoFlowSection").classList.remove("hidden");
-                document.getElementById("dashboardSection").classList.add("hidden");
+                document.getElementById("ssoFlowSection")?.classList.remove("hidden");
+                document.getElementById("dashboardSection")?.classList.add("hidden");
 
-                document.getElementById("ssoClientId").textContent = clientId || "unknown-app";
-                document.getElementById("ssoInstanceDomain").textContent = instanceDomain || window.location.hostname;
-                document.getElementById("ssoUserAlias").textContent = `@${currentAlias}`;
-                document.getElementById("ssoZenPubKey").textContent = currentKeys.pub;
+                const clientEl = document.getElementById("ssoClientId");
+                const domainEl = document.getElementById("ssoInstanceDomain");
+                const aliasEl = document.getElementById("ssoUserAlias");
+                const pubEl = document.getElementById("ssoZenPubKey");
+
+                if (clientEl) clientEl.textContent = clientId || "unknown-app";
+                if (domainEl) domainEl.textContent = instanceDomain || window.location.hostname;
+                if (aliasEl) aliasEl.textContent = `@${currentAlias}`;
+                if (pubEl) pubEl.textContent = currentKeys.pub;
             }
         }
 
@@ -1146,12 +1179,11 @@
             if (redirectUri) {
                 window.location.href = redirectUri + "#error=user_cancelled";
             } else {
-                document.getElementById("ssoFlowSection").classList.add("hidden");
-                document.getElementById("dashboardSection").classList.remove("hidden");
+                document.getElementById("ssoFlowSection")?.classList.add("hidden");
+                document.getElementById("dashboardSection")?.classList.remove("hidden");
             }
         }
 
-        // Copy Helpers
         function copyToClipboard(elementId) {
             const el = document.getElementById(elementId);
             if (el) {
@@ -1168,34 +1200,32 @@
             }
         }
 
-        // Global Window Bindings for Inline HTML Event Handlers
-        window.handleUserPassSubmit = handleUserPassSubmit;
-        window.generateRandomKeypair = generateRandomKeypair;
-        window.exportIdentityBackup = exportIdentityBackup;
-        window.togglePrivateKeyVisibility = togglePrivateKeyVisibility;
-        window.simulatePassportHandshake = simulatePassportHandshake;
-        window.reconnectRelay = reconnectRelay;
-        window.sendP2pPing = sendP2pPing;
-        window.updateApDerivation = updateApDerivation;
-        window.generateSsoTokenPreview = generateSsoTokenPreview;
-        window.openLinkInstanceModal = openLinkInstanceModal;
-        window.closeLinkInstanceModal = closeLinkInstanceModal;
-        window.switchLinkTab = switchLinkTab;
-        window.handleModalSignChallenge = handleModalSignChallenge;
-        window.handleModalImportPassport = handleModalImportPassport;
-        window.verifyInstanceBackend = verifyInstanceBackend;
-        window.copyPassportJson = copyPassportJson;
-        window.unlinkInstance = unlinkInstance;
-        window.handleSsoAuthorize = handleSsoAuthorize;
-        window.handleSsoCancel = handleSsoCancel;
-        window.copyToClipboard = copyToClipboard;
-        window.copyText = copyText;
-
-        // On Load Init
+        // DOM Event Listeners Attachment (Guarantees zero inline ReferenceErrors)
         document.addEventListener("DOMContentLoaded", async () => {
             await initOrLoadSession();
             checkSsoQueryParams();
             initRelayClient();
+
+            // Bind Event Listeners
+            document.getElementById('userPassForm')?.addEventListener('submit', handleUserPassSubmit);
+            document.getElementById('ssoAuthorizeBtn')?.addEventListener('click', handleSsoAuthorize);
+            document.getElementById('ssoCancelBtn')?.addEventListener('click', handleSsoCancel);
+            document.getElementById('exportIdentityBackupBtn')?.addEventListener('click', exportIdentityBackup);
+            document.getElementById('generateRandomKeysBtn')?.addEventListener('click', generateRandomKeypair);
+            document.getElementById('copyZenPubKeyBtn')?.addEventListener('click', () => copyToClipboard('dashZenPubKey'));
+            document.getElementById('copyMasterPrivKeyBtn')?.addEventListener('click', () => copyToClipboard('dashMasterPrivKey'));
+            document.getElementById('togglePrivateKeyVisibilityBtn')?.addEventListener('click', togglePrivateKeyVisibility);
+            document.getElementById('sendP2pPingBtn')?.addEventListener('click', sendP2pPing);
+            document.getElementById('openLinkInstanceModalBtn')?.addEventListener('click', openLinkInstanceModal);
+            document.getElementById('closeLinkInstanceModalBtn')?.addEventListener('click', closeLinkInstanceModal);
+            document.getElementById('modalTabSignBtn')?.addEventListener('click', () => switchLinkTab('sign'));
+            document.getElementById('modalTabImportBtn')?.addEventListener('click', () => switchLinkTab('import'));
+            document.getElementById('modalSignChallengeBtn')?.addEventListener('click', handleModalSignChallenge);
+            document.getElementById('modalImportPassportBtn')?.addEventListener('click', handleModalImportPassport);
+            document.getElementById('apDomainInput')?.addEventListener('input', updateApDerivation);
+            document.getElementById('apUserInput')?.addEventListener('input', updateApDerivation);
+            document.getElementById('simulatePassportHandshakeBtn')?.addEventListener('click', simulatePassportHandshake);
+            document.getElementById('generateSsoTokenPreviewBtn')?.addEventListener('click', generateSsoTokenPreview);
         });
     </script>
 </body>
