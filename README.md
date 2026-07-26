@@ -75,21 +75,21 @@ Using `deriveApKeypair()`:
   - `privateKeyPem`: ActivityPub HTTP Signature signing key
 
 ### 4. "Login with FID" SSO Protocol
-FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P apps:
-1. App initiates an SSO request (`createSsoRequest`).
-2. User authenticates with their master FID key.
-3. Server issues a signed `FidSsoToken` containing the user's `zenPubKey`, `actorUri`, and `FidPassport`.
-4. App verifies the token (`verifySsoToken`) to log the user in instantly without password forms.
+FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P apps.
 
-**Browser/Web Client Considerations:**
-Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API. For web-based Global Portals (like `tunecamp.org`), the recommended SSO approach is:
+**Current Implementation (Simplified):**
 1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations).
-2. Browser issues the `FidSsoToken` (HMAC signed using Web Crypto).
+2. Browser generates an `FidSsoToken` (HMAC-SHA256 signed using Web Crypto) containing `clientId`, `instanceDomain`, `username`, `zenPubKey`, `issuedAt`, `signature`, and `nonce`.
 3. Browser passes the authentication payload back to the target instance via the URL hash fragment (Implicit Flow):
    ```text
    redirectUri#payload=encodeURIComponent(JSON.stringify({ ssoToken, apSeed }))
    ```
-4. Target instance backend (Node.js) wraps the 32-byte `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()` to finalize the ActivityPub actor creation safely.
+4. Target instance backend (Node.js) validates the SSO token fields (`username`, `issuedAt`, `zenPubKey`), checks token age (max 15 min), validates `apSeed` length (32 bytes), wraps the `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and creates/links the user.
+
+**Note:** The current implementation does not use `FidSsoHandler.verifySsoToken()` or include `FidPassport`/`actorUri` in the SSO token. The `FidSsoHandler` class is available in the `fid` package for future use when the portal implements the full passport-based SSO flow.
+
+**Browser/Web Client Considerations:**
+Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API, which is why the `apSeed` derivation is done client-side and the Ed25519 key wrapping is done server-side.
 
 ### 5. 🌐 Standalone HTML Central Authentication & Identity Portal (`portal.html`)
 FID includes a zero-dependency, single-page Web Application in [`portal.html`](file:///c:/Users/dev/source/repos/tunecamp/fid/portal.html) (also accessible via `index.html` and `sso.html`).
@@ -97,6 +97,8 @@ FID includes a zero-dependency, single-page Web Application in [`portal.html`](f
 It functions as both:
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
 - **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs, linking Instance Passports, and calculating deterministic ActivityPub handles and seeds.
+
+**SSO Flow:** The `sso.html` page implements the simplified SSO flow described in [Section 4](#4-login-with-fid-sso-protocol). It does not use `FidSsoHandler` or include `FidPassport`/`actorUri` in the SSO token.
 
 ---
 
