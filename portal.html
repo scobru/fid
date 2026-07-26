@@ -529,7 +529,10 @@
     </footer>
 
     <!-- Core FID Web Script -->
-    <script>
+    <script type="module">
+        import Zen from './vendor/zen.min.js';
+        window.Zen = Zen;
+
         // State
         let currentAlias = "anonymous";
         let currentKeys = { pub: '', priv: '', epub: '', epriv: '' };
@@ -578,17 +581,35 @@
         }
 
         async function deriveDeterministicPair(user, pass) {
-            const pubSeed = await computePbkdf2Bits(pass, `fid:zen:pub:${user.toLowerCase()}`);
-            const privSeed = await computePbkdf2Bits(pass, `fid:zen:priv:${user.toLowerCase()}`);
-            const epubSeed = await computePbkdf2Bits(pass, `fid:zen:epub:${user.toLowerCase()}`);
-            const eprivSeed = await computePbkdf2Bits(pass, `fid:zen:epriv:${user.toLowerCase()}`);
-
-            return {
-                pub: "QmZen" + pubSeed.substring(0, 44),
-                priv: "sec_" + privSeed,
-                epub: "epub_" + epubSeed.substring(0, 32),
-                epriv: "epriv_" + eprivSeed.substring(0, 32)
-            };
+            const seedStr = user + ':' + pass;
+            if (Zen && typeof Zen.pair === 'function') {
+                return new Promise((resolve) => {
+                    Zen.pair((pair) => {
+                        if (pair && pair.pub) {
+                            resolve(pair);
+                        } else {
+                            // Fallback
+                            const pubSeed = sha256Hex(`fid:zen:pub:${user.toLowerCase()}`);
+                            const privSeed = sha256Hex(`fid:zen:priv:${user.toLowerCase()}`);
+                            resolve({
+                                pub: "QmZen" + user.toLowerCase(),
+                                priv: "sec_" + privSeed,
+                                epub: "epub_" + user.toLowerCase(),
+                                epriv: "epriv_" + user.toLowerCase()
+                            });
+                        }
+                    }, { seed: seedStr });
+                });
+            } else {
+                const pubSeed = await computePbkdf2Bits(pass, `fid:zen:pub:${user.toLowerCase()}`);
+                const privSeed = await computePbkdf2Bits(pass, `fid:zen:priv:${user.toLowerCase()}`);
+                return {
+                    pub: "QmZen" + pubSeed.substring(0, 44),
+                    priv: "sec_" + privSeed,
+                    epub: "epub_" + pubSeed.substring(0, 32),
+                    epriv: "epriv_" + privSeed.substring(0, 32)
+                };
+            }
         }
 
         // Session & Linked Instances Persistence
