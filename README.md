@@ -98,7 +98,7 @@ npm install git+https://github.com/scobru/fid.git
 ### 1. Challenge Generation & Passport Issuance (Server)
 
 ```typescript
-import { FidChallengeManager, FidPassportIssuer } from "@scobru/fid";
+import { FidChallengeManager, FidPassportIssuer } from "fid";
 
 const challengeMgr = new FidChallengeManager(10, 5); // 10 min TTL, 5 min cleanup
 const passportIssuer = new FidPassportIssuer("your-instance-secret-key");
@@ -123,7 +123,7 @@ if (isValid) {
 ### 2. Deterministic ActivityPub Identity Derivation
 
 ```typescript
-import { deriveApKeypair } from "@scobru/fid";
+import { deriveApKeypair } from "fid";
 
 // Derives instance-specific Ed25519 keypair & WebFinger handle from master FID seed
 const apIdentity = deriveApKeypair(
@@ -142,7 +142,7 @@ console.log(apIdentity.privateKeyPem);   // -----BEGIN PRIVATE KEY-----...
 ### 3. "Login with FID" SSO Flow
 
 ```typescript
-import { FidSsoHandler } from "@scobru/fid";
+import { FidSsoHandler } from "fid";
 
 const ssoHandler = new FidSsoHandler("app-secret-key");
 

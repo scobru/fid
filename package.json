@@ -1,5 +1,5 @@
 {
-  "name": "@scobru/fid",
+  "name": "fid",
   "version": "1.0.0",
   "description": "FID (Fediverse-ID) - Zero-Knowledge P2P & Fediverse Decentralized Authentication Library powered by Zen SEA",
   "main": "dist/src/index.js",
