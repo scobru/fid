@@ -1171,7 +1171,8 @@
                 signature: tokenSig
             };
 
-            const callbackHash = `#ssoToken=${encodeURIComponent(JSON.stringify(ssoToken))}&apSeed=${encodeURIComponent(apSeed)}`;
+            const payload = { ssoToken, apSeed };
+            const callbackHash = `#payload=${encodeURIComponent(JSON.stringify(payload))}`;
             window.location.href = redirectUri + callbackHash;
         }
 
