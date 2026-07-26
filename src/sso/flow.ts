@@ -61,18 +61,35 @@ export class FidSsoHandler {
   }
 
   /**
+   * Validates an incoming SSO Token on the target Fediverse app and returns detailed result
+   */
+  public validateSsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): { valid: boolean; error?: string } {
+    if (!token) {
+      return { valid: false, error: "Missing token payload" };
+    }
+
+    if (!token.username || !token.issuedAt || !token.zenPubKey) {
+      return { valid: false, error: "Missing required ssoToken fields (username, issuedAt, zenPubKey)" };
+    }
+
+    if (Date.now() - token.issuedAt > maxAgeMs) {
+      return { valid: false, error: "SSO token expired" };
+    }
+
+    if (token.passport) {
+      const passportValid = this.passportIssuer.verifyPassport(token.passport);
+      if (!passportValid) {
+        return { valid: false, error: "Invalid passport signature" };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  /**
    * Verifies an incoming SSO Token on the target Fediverse app
    */
-  public verifySsoToken(token: FidSsoToken): boolean {
-    if (!token || !token.passport) return false;
-
-    // 1. Verify Passport HMAC
-    const passportValid = this.passportIssuer.verifyPassport(token.passport);
-    if (!passportValid) return false;
-
-    // 2. Verify token age (max 15 mins)
-    if (Date.now() - token.issuedAt > 15 * 60 * 1000) return false;
-
-    return true;
+  public verifySsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): boolean {
+    return this.validateSsoToken(token, maxAgeMs).valid;
   }
 }

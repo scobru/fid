@@ -93,9 +93,7 @@ FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P a
    ```text
    redirectUri#payload=encodeURIComponent(JSON.stringify({ ssoToken, apSeed }))
    ```
-4. Target instance backend (Node.js) validates the SSO token fields (`username`, `issuedAt`, `zenPubKey`), checks token age (max 15 min), validates `apSeed` length (32 bytes), wraps the `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and creates/links the user.
-
-**Note:** The current implementation does not use `FidSsoHandler.verifySsoToken()` or include `FidPassport`/`actorUri` in the SSO token. The `FidSsoHandler` class is available in the `fid` package for future use when the portal implements the full passport-based SSO flow.
+4. Target instance backend (Node.js) uses `FidSsoHandler.validateSsoToken(ssoToken)` to verify fields, token age (max 15 min), and signatures, validates `apSeed` length (32 bytes), wraps `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and registers/logs in the user.
 
 **Browser/Web Client Considerations:**
 Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API, which is why the `apSeed` derivation is done client-side and the Ed25519 key wrapping is done server-side.
@@ -107,7 +105,7 @@ It functions as both:
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
 - **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs, linking Instance Passports, and calculating deterministic ActivityPub handles and seeds.
 
-**SSO Flow:** The `sso.html` page implements the simplified SSO flow described in [Section 4](#4-login-with-fid-sso-protocol). It does not use `FidSsoHandler` or include `FidPassport`/`actorUri` in the SSO token.
+**SSO Flow:** The `sso.html` page implements the zero-knowledge client SSO flow described in [Section 4](#4-login-with-fid-sso-protocol), producing an `FidSsoToken` and `apSeed` verifiable server-side with `FidSsoHandler`.
 
 ---
 

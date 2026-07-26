@@ -56,13 +56,14 @@ export interface FidSsoRequest {
 }
 
 export interface FidSsoToken {
-  clientId: string;
-  instanceDomain: string;
+  clientId?: string;
+  instanceDomain?: string;
   username: string;
   zenPubKey: string;
-  actorUri: string;
+  actorUri?: string;
   issuedAt: number;
-  passport: FidPassport;
-  signature: string;
+  passport?: FidPassport;
+  signature?: string;
+  nonce?: string;
 }
 
