@@ -29,3 +29,16 @@ test("Login with FID SSO Flow", () => {
   const isValid = ssoHandler.verifySsoToken(ssoToken);
   assert.strictEqual(isValid, true);
 });
+
+test("verifyPassportSignature returns false on buffer length mismatch", async () => {
+  const { verifyPassportSignature } = await import("../src/crypto/hmac.js");
+  const badPassport = {
+    instanceDomain: "tunecamp.org",
+    localUsername: "bob",
+    zenPubKey: "user_master_sea_seed_pub",
+    issuedAt: Date.now(),
+    passportSignature: "deadbeef",
+    publicDataEndpoint: ""
+  };
+  assert.strictEqual(verifyPassportSignature(badPassport, "secret"), false);
+});

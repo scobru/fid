@@ -25,8 +25,8 @@ export function verifyPassportSignature(passport: FidPassport, secret: string): 
     passport.issuedAt,
     secret
   );
-  return crypto.timingSafeEqual(
-    Buffer.from(passport.passportSignature, "hex"),
-    Buffer.from(expectedSignature, "hex")
-  );
+  const actual = Buffer.from(passport.passportSignature, "hex");
+  const expected = Buffer.from(expectedSignature, "hex");
+  if (actual.length !== expected.length) return false;
+  return crypto.timingSafeEqual(actual, expected);
 }
