@@ -19,7 +19,7 @@
 ### Installation
 
 ```bash
-npm install @scobru/fid
+npm install git+https://github.com/scobru/fid.git
 ```
 
 ### 1. Server Side (Challenge & Passport Issuance)
