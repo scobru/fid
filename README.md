@@ -88,6 +88,13 @@ Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web 
 3. Browser passes `{ ssoToken, apSeed }` to the target instance backend.
 4. Target instance backend (Node.js) wraps the 32-byte `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()` to finalize the ActivityPub actor creation safely.
 
+### 5. 🌐 Standalone HTML Central Authentication & Identity Portal (`portal.html`)
+FID includes a zero-dependency, single-page Web Application in [`portal.html`](file:///c:/Users/dev/source/repos/tunecamp/fid/portal.html) (also accessible via `index.html` and `sso.html`).
+
+It functions as both:
+- **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
+- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs, linking Instance Passports, and calculating deterministic ActivityPub handles and seeds.
+
 ---
 
 ## 🚀 Quick Start

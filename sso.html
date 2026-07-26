@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FID Single Sign-On (SSO)</title>
+    <script>
+        // Forward query string parameters to portal.html for SSO processing
+        window.location.href = "portal.html" + window.location.search + window.location.hash;
+    </script>
+</head>
+<body style="background-color: #090a0f; color: #fff; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+    <div style="text-align: center;">
+        <h2>Reindirizzamento al Portale di Autenticazione FID...</h2>
+        <p><a href="portal.html" style="color: #2997ff;">Clicca qui se non vieni reindirizzato automaticamente</a></p>
+    </div>
+</body>
+</html>
