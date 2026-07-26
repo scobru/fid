@@ -1,8 +1,17 @@
 # FID — Fediverse-ID 🛡️
 
-**FID (Fediverse-ID)** is a self-sovereign, zero-knowledge cryptographic identity and single-sign-on (SSO) protocol designed for **ActivityPub/Fediverse applications**, **TuneCamp instances**, and **decentralized P2P web apps**. 
+**FID (Fediverse-ID)** is a generic, self-sovereign, zero-knowledge cryptographic identity and Single-Sign-On (SSO) protocol designed for **any ActivityPub/Fediverse application**, **P2P web apps**, and **decentralized platforms**.
 
-It is powered by [Zen SEA](https://github.com/scobru/zen) (Security, Encryption & Authorization) cryptographic keypairs and deterministic key derivation primitives.
+It allows users to own a single master cryptographic keypair (via [Zen SEA](https://github.com/scobru/zen)) and authenticate seamlessly across independent instances and applications without centralized identity providers.
+
+> ℹ️ **Reference Implementation Example:** [TuneCamp](https://github.com/scobru/tunecamp) is an example of an application implementing the FID protocol for federated music streaming and user authentication.
+
+---
+
+## 🌐 Demo Portal
+
+A live reference implementation of the central SSO and Identity Portal is deployed at:  
+👉 **[https://fid-portal.vercel.app/](https://fid-portal.vercel.app/)**
 
 ---
 
@@ -12,7 +21,7 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
 
 ```
                                 ┌───────────────────────────┐
-                                │     tunecamp.org          │
+                                │   fid-portal.vercel.app   │
                                 │  (Zen SEA Global Portal)  │
                                 └─────────────┬─────────────┘
                                               │  WSS (Zen Graph)
@@ -24,8 +33,8 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
                         ┌─────────────────────┴─────────────────────┐
                         │                                           │
            ┌────────────▼────────────┐                 ┌────────────▼────────────┐
+           │   Fediverse App /       │                 │   Fediverse App /       │
            │   TuneCamp Instance A   │                 │   TuneCamp Instance B   │
-           │ (sudorecords.scobru...) │                 │ (tunecamp.subterra...)  │
            └─────────────────────────┘                 └─────────────────────────┘
 ```
 
@@ -41,7 +50,7 @@ Every user owns a master **Zen SEA keypair**:
 Authentication is **Zero-Knowledge**: instances verify cryptographically signed challenges rather than receiving or storing passwords.
 
 ### 2. Two-Step Instance Passport Handshake
-To link a local instance profile (e.g. `@scobru` on `sudorecords.scobru.dev`) to a global Zen identity (`zenPubKey`):
+To link a local instance profile (e.g. `@scobru` on a target instance) to a global Zen identity (`zenPubKey`):
 
 ```
 Instance (Server)                     User / Portal (Client)
@@ -69,8 +78,8 @@ Using `deriveApKeypair()`:
 - **Derivation**: Uses `PBKDF2-SHA256` over salt `fid:activitypub:<domain>:<username>` to generate a 32-byte seed.
 - **Key Generation**: Wraps the seed in an **Ed25519 PKCS#8 DER** envelope to instantiate a deterministic Ed25519 keypair.
 - **Output**:
-  - `webfingerHandle`: `@alice@tunecamp.org`
-  - `actorUri`: `https://tunecamp.org/users/alice`
+  - `webfingerHandle`: `@alice@domain.org`
+  - `actorUri`: `https://domain.org/users/alice`
   - `publicKeyPem`: W3C/ActivityPub compatible Ed25519 Public Key
   - `privateKeyPem`: ActivityPub HTTP Signature signing key
 
@@ -91,8 +100,8 @@ FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P a
 **Browser/Web Client Considerations:**
 Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API, which is why the `apSeed` derivation is done client-side and the Ed25519 key wrapping is done server-side.
 
-### 5. 🌐 Standalone HTML Central Authentication & Identity Portal (`portal.html`)
-FID includes a zero-dependency, single-page Web Application in [`portal.html`](file:///c:/Users/dev/source/repos/tunecamp/fid/portal.html) (also accessible via `index.html` and `sso.html`).
+### 5. 🌐 Central Authentication & Identity Portal (`portal.html`)
+FID includes a zero-dependency, single-page Web Application in [`portal.html`](file:///c:/Users/dev/source/repos/tunecamp/fid/portal.html) (also accessible via `index.html` and `sso.html`), deployed live at **[https://fid-portal.vercel.app/](https://fid-portal.vercel.app/)**.
 
 It functions as both:
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
