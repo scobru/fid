@@ -81,6 +81,13 @@ FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P a
 3. Server issues a signed `FidSsoToken` containing the user's `zenPubKey`, `actorUri`, and `FidPassport`.
 4. App verifies the token (`verifySsoToken`) to log the user in instantly without password forms.
 
+**Browser/Web Client Considerations:**
+Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API. For web-based Global Portals (like `tunecamp.org`), the recommended SSO approach is:
+1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations).
+2. Browser issues the `FidSsoToken` (HMAC signed using Web Crypto).
+3. Browser passes `{ ssoToken, apSeed }` to the target instance backend.
+4. Target instance backend (Node.js) wraps the 32-byte `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()` to finalize the ActivityPub actor creation safely.
+
 ---
 
 ## 🚀 Quick Start
