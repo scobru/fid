@@ -124,5 +124,13 @@ export interface FidSsoToken {
   signature?: string;
   nonce?: string;
   masterKeySource?: MasterKeySource;
+  /**
+   * Raw WebAuthn assertion fields (base64url), required to verify `signature`
+   * when masterKeySource.type === 'webauthn'. Absent for Zen SEA tokens.
+   */
+  webauthnAssertion?: {
+    authenticatorData: string;
+    clientDataJSON: string;
+  };
 }
 

@@ -290,7 +290,7 @@ export async function verifyAssertionSignature(
     // Reconstruct signed data: authenticatorData || SHA256(clientDataJSON)
     const clientDataHash = await crypto.subtle.digest('SHA-256', assertion.clientDataJSON.buffer as ArrayBuffer);
     const signedData = concatBytes(assertion.authenticatorData, new Uint8Array(clientDataHash));
-    
+
     // Import public key
     const publicKey = await crypto.subtle.importKey(
       'spki',
@@ -299,17 +299,58 @@ export async function verifyAssertionSignature(
       false,
       ['verify']
     );
-    
+
+    // WebAuthn assertions carry ASN.1 DER-encoded signatures, but WebCrypto's
+    // ECDSA verify expects raw IEEE P1363 (r || s) — convert before verifying.
+    const rawSignature = derToRawEcdsaSignature(assertion.signature, 32);
+
     // Verify signature (ECDSA with SHA-256)
     return await crypto.subtle.verify(
       { name: 'ECDSA', hash: 'SHA-256' },
       publicKey,
-      assertion.signature.buffer as ArrayBuffer,
+      rawSignature.buffer as ArrayBuffer,
       signedData.buffer as ArrayBuffer
     );
   } catch {
     return false;
   }
+}
+
+/**
+ * @llm-summary Converts an ASN.1 DER-encoded ECDSA signature (SEQUENCE of two INTEGERs) to raw r||s.
+ * @llm-context WebAuthn's AuthenticatorAssertionResponse.signature is DER-encoded; WebCrypto's
+ * ECDSA verify expects the raw fixed-width r||s (P1363) format instead.
+ */
+function derToRawEcdsaSignature(der: Uint8Array, componentSize: number): Uint8Array {
+  let offset = 1; // skip SEQUENCE tag (0x30)
+  let seqLen = der[offset++];
+  if (seqLen & 0x80) {
+    offset += seqLen & 0x7f; // skip long-form length bytes
+  }
+
+  function readInteger(): Uint8Array {
+    if (der[offset] !== 0x02) throw new Error('Expected DER INTEGER');
+    offset++;
+    const len = der[offset++];
+    let bytes = der.slice(offset, offset + len);
+    offset += len;
+    while (bytes.length > componentSize && bytes[0] === 0) {
+      bytes = bytes.slice(1);
+    }
+    if (bytes.length < componentSize) {
+      const padded = new Uint8Array(componentSize);
+      padded.set(bytes, componentSize - bytes.length);
+      bytes = padded;
+    }
+    return bytes;
+  }
+
+  const r = readInteger();
+  const s = readInteger();
+  const out = new Uint8Array(componentSize * 2);
+  out.set(r, 0);
+  out.set(s, componentSize);
+  return out;
 }
 
 // ===== CBOR/ASN.1 Helpers =====
@@ -393,4 +434,15 @@ function bytesToBase64Url(bytes: Uint8Array): string {
   }
   const b64 = btoa(binary);
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+/**
+ * @llm-summary Decodes a base64url string (as sent by the client) back to raw bytes.
+ * @llm-context Used server-side to reconstruct authenticatorData/clientDataJSON/signature
+ * from the JSON-transported FidSsoToken.webauthnAssertion fields before verification.
+ */
+export function base64UrlToBytes(b64url: string): Uint8Array {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/').padEnd(b64url.length + (4 - (b64url.length % 4)) % 4, '=');
+  const binary = atob(b64);
+  return new Uint8Array(binary.split('').map(c => c.charCodeAt(0)));
 }

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { deriveApIdentity, deriveApSeed } from "../crypto/derivation.js";
 import { FidPassportIssuer } from "../server/passport.js";
 import { signPayload, verifySignature } from "../crypto/sea.js";
+import { verifyAssertionSignature, base64UrlToBytes } from "../crypto/webauthn.js";
 import type { FidSsoRequest, FidSsoToken, MasterKeySource } from "../types.js";
 
 /**
@@ -67,14 +68,17 @@ export class FidSsoHandler {
     const tokenPayload = `${ssoReq.clientId}:${ssoReq.instanceDomain}:${username}:${sourceId}:${issuedAt}:${ssoReq.nonce}`;
     
     // Sign with appropriate key: Zen SEA private key, or WebAuthn (handled client-side during assertion)
-    let signature: string;
-    if (masterKeySource.type === 'zen') {
-      signature = await signPayload(tokenPayload, masterKeySource.privKey);
-    } else {
-      // For WebAuthn, signature is produced by authenticator during credential assertion
-      // This placeholder will be replaced by the actual WebAuthn assertion signature
-      signature = 'webauthn:assertion_signature_placeholder';
+    if (masterKeySource.type === 'webauthn') {
+      // The authenticator (not this server-side method) produces the WebAuthn
+      // signature during navigator.credentials.get(). Callers must perform the
+      // assertion ceremony client-side and build the FidSsoToken directly with
+      // the resulting signature + webauthnAssertion fields.
+      throw new Error(
+        "issueSsoToken cannot sign WebAuthn tokens server-side; perform the assertion " +
+        "client-side and construct the FidSsoToken with the real assertion signature."
+      );
     }
+    const signature = await signPayload(tokenPayload, masterKeySource.privKey);
 
     return {
       clientId: ssoReq.clientId,
@@ -93,10 +97,14 @@ export class FidSsoHandler {
 /**
  * @llm-summary Validates an SSO token and returns a detailed result object with success/failure reason.
  * @llm-context Called by Fediverse apps to authenticate incoming SSO tokens. Checks token completeness, expiry, signature validity, and optionally passport validity. Returns { valid: boolean, error?: string } — never throws.
- * @llm-edge-cases Returns { valid: false, error: "Missing token payload" } if token is falsy. Returns { valid: false, error: "Missing required ssoToken fields..." } if any required field is missing. Returns { valid: false, error: "SSO token expired" } if the token is older than maxAgeMs. Returns { valid: false, error: "Invalid SSO token signature" } if the signature does not match. If passport is present, it is also verified — failure returns "Invalid passport signature".
- * @llm-faq Q: What fields are required? A: username, issuedAt, zenPubKey, signature, clientId, instanceDomain, nonce. Q: Is the passport check optional? A: Yes — if passport is undefined, it is skipped. Q: Can this be called with a stale token? A: Yes, it will return valid: false with error "SSO token expired".
+ * @llm-edge-cases Returns { valid: false, error: "Missing token payload" } if token is falsy. Returns { valid: false, error: "Missing required ssoToken fields..." } if any required field is missing. Returns { valid: false, error: "SSO token expired" } if the token is older than maxAgeMs. Returns { valid: false, error: "Invalid SSO token signature" } if the signature does not match. If passport is present, it is also verified — failure returns "Invalid passport signature". For WebAuthn tokens, `trustedWebauthnKey` (when supplied) overrides `token.masterKeySource.publicKeyPem` — callers MUST pass the public key they stored at credential registration, never trust the self-declared key on the token, or any attacker who controls the token payload can substitute their own key and forge a valid signature.
+ * @llm-faq Q: What fields are required? A: username, issuedAt, zenPubKey, signature, clientId, instanceDomain, nonce. Q: Is the passport check optional? A: Yes — if passport is undefined, it is skipped. Q: Can this be called with a stale token? A: Yes, it will return valid: false with error "SSO token expired". Q: Why does trustedWebauthnKey exist? A: The token's own publicKeyPem is client-supplied and unauthenticated; without a server-side lookup by credentialId, an attacker could self-sign a token with a key of their choosing.
  */
-  public async validateSsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): Promise<{ valid: boolean; error?: string }> {
+  public async validateSsoToken(
+    token: Partial<FidSsoToken>,
+    maxAgeMs: number = 15 * 60 * 1000,
+    trustedWebauthnKey?: string
+  ): Promise<{ valid: boolean; error?: string }> {
     if (!token) {
       return { valid: false, error: "Missing token payload" };
     }
@@ -104,12 +112,15 @@ export class FidSsoHandler {
     // Determine verification key based on masterKeySource
     let verificationKey: string;
     let sourceId: string;
-    
+
     if (token.masterKeySource?.type === 'zen') {
       verificationKey = token.masterKeySource.pubKey;
       sourceId = token.masterKeySource.pubKey;
     } else if (token.masterKeySource?.type === 'webauthn') {
-      verificationKey = token.masterKeySource.publicKeyPem;
+      if (trustedWebauthnKey !== undefined && trustedWebauthnKey !== token.masterKeySource.publicKeyPem) {
+        return { valid: false, error: "WebAuthn public key does not match registered credential" };
+      }
+      verificationKey = trustedWebauthnKey ?? token.masterKeySource.publicKeyPem;
       sourceId = token.masterKeySource.credentialId;
     } else {
       // Backward compatibility: use zenPubKey
@@ -126,16 +137,45 @@ export class FidSsoHandler {
     }
 
     const tokenPayload = `${token.clientId}:${token.instanceDomain}:${token.username}:${sourceId}:${token.issuedAt}:${token.nonce}`;
-    
+
     let signatureValid: boolean;
     if (token.masterKeySource?.type === 'webauthn') {
-      // WebAuthn signature verification would use crypto.subtle.verify with the public key
-      // For now, we accept the placeholder; real impl needs WebAuthn assertion verification
-      signatureValid = token.signature.startsWith('webauthn:') || await verifySignature(tokenPayload, token.signature, verificationKey);
+      if (!token.webauthnAssertion?.authenticatorData || !token.webauthnAssertion?.clientDataJSON) {
+        return { valid: false, error: "Missing WebAuthn assertion (authenticatorData/clientDataJSON)" };
+      }
+
+      const authenticatorData = base64UrlToBytes(token.webauthnAssertion.authenticatorData);
+      const clientDataJSON = base64UrlToBytes(token.webauthnAssertion.clientDataJSON);
+      const signatureBytes = base64UrlToBytes(token.signature);
+
+      // Bind the assertion to this exact SSO request: the authenticator's signed
+      // challenge must equal SHA-256(tokenPayload), otherwise an assertion signed
+      // for a different login could be replayed here.
+      let clientData: { type?: string; challenge?: string };
+      try {
+        clientData = JSON.parse(Buffer.from(clientDataJSON).toString("utf8"));
+      } catch {
+        return { valid: false, error: "Malformed WebAuthn clientDataJSON" };
+      }
+      const expectedChallenge = crypto.createHash("sha256").update(tokenPayload).digest().toString("base64url");
+      if (clientData.type !== "webauthn.get" || clientData.challenge !== expectedChallenge) {
+        return { valid: false, error: "WebAuthn assertion does not match this SSO request" };
+      }
+
+      signatureValid = await verifyAssertionSignature(
+        {
+          credentialId: new Uint8Array(),
+          credentialIdBase64Url: sourceId,
+          authenticatorData,
+          clientDataJSON,
+          signature: signatureBytes
+        },
+        verificationKey
+      );
     } else {
       signatureValid = await verifySignature(tokenPayload, token.signature, verificationKey);
     }
-    
+
     if (!signatureValid) {
       return { valid: false, error: "Invalid SSO token signature" };
     }
@@ -156,7 +196,11 @@ export class FidSsoHandler {
  * @llm-edge-cases Returns false if the token is missing, expired, has invalid signature, or has an invalid passport. The error details are swallowed — use validateSsoToken if you need the reason.
  * @llm-faq Q: How is this different from validateSsoToken? A: This returns only boolean; validateSsoToken returns { valid, error? }. Q: When should I use verifySsoToken? A: When you only need to know if the token is valid and don't need the error detail.
  */
-  public async verifySsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): Promise<boolean> {
-    return (await this.validateSsoToken(token, maxAgeMs)).valid;
+  public async verifySsoToken(
+    token: Partial<FidSsoToken>,
+    maxAgeMs: number = 15 * 60 * 1000,
+    trustedWebauthnKey?: string
+  ): Promise<boolean> {
+    return (await this.validateSsoToken(token, maxAgeMs, trustedWebauthnKey)).valid;
   }
 }
