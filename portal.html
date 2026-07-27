@@ -98,7 +98,6 @@
 
         <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-anthro-muted">
             <a href="#identity-section" class="hover:text-anthro-dark transition-colors">Identità</a>
-            <a href="#instances-section" class="hover:text-anthro-dark transition-colors">Istanze Collegate</a>
             <a href="#relay-section" class="hover:text-anthro-dark transition-colors">P2P Network</a>
             <a href="#activitypub-section" class="hover:text-anthro-dark transition-colors">ActivityPub</a>
         </nav>
@@ -331,36 +330,8 @@
 
             </div>
 
-            <!-- SECTION: LINKED INSTANCES MANAGER -->
-            <div id="instances-section" class="space-y-6 pt-6">
-                <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-anthro-dark/10 pb-4">
-                    <div class="space-y-1">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider">FEDERATED INSTANCES</span>
-                        <h2 class="font-serif text-3xl font-medium text-anthro-dark tracking-tight">
-                            Istanze TuneCamp Collegate
-                        </h2>
-                        <p class="text-anthro-muted text-sm">Passaporti crittografici collegati alla tua identità Zen globale.</p>
-                    </div>
-                    <button id="openLinkInstanceModalBtn" class="btn-anthro text-xs">
-                        <span>Link New Instance</span>
-                        <span class="ml-2 font-mono">+</span>
-                    </button>
-                </div>
-
-                <!-- Linked Instances Grid -->
-                <div id="linkedInstancesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Dynamic Items rendered here -->
-                </div>
-
-                <!-- Empty State Box -->
-                <div id="emptyInstancesBox" class="p-10 text-center bg-anthro-card/50 border border-dashed border-anthro-dark/20 rounded-2xl space-y-2">
-                    <span class="font-serif text-lg font-medium text-anthro-dark block">Nessuna istanza collegata</span>
-                    <p class="text-anthro-muted text-xs">Clicca su "Link New Instance" per firmare un challenge o importare un passaporto rilasciato.</p>
-                </div>
-            </div>
-
-            <!-- SECTION: ACTIVITYPUB & PASSPORT SIMULATORS -->
-            <div id="activitypub-section" class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+            <!-- SECTION: ACTIVITYPUB -->
+            <div id="activitypub-section" class="grid grid-cols-1 gap-6 pt-6">
 
                 <!-- ActivityPub Derivation Card -->
                 <div class="anthro-card p-8 space-y-6">
@@ -401,39 +372,6 @@
                     </div>
                 </div>
 
-                <!-- Passport Handshake Simulator Card -->
-                <div class="anthro-card p-8 space-y-6">
-                    <div class="space-y-2">
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">HANDSHAKE PROTOCOL</span>
-                        <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
-                            Passport Handshake Simulator
-                        </h2>
-                        <p class="text-anthro-muted text-xs leading-relaxed">
-                            Simulazione del flusso di firma challenge e rilascio Passaporto HMAC.
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 text-xs font-mono">
-                        <div>
-                            <label class="block text-[10px] uppercase text-anthro-muted mb-1 font-sans">Instance Domain</label>
-                            <input type="text" id="passportInstance" value="sudorecords.scobrudot.dev" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] uppercase text-anthro-muted mb-1 font-sans">Local Username</label>
-                            <input type="text" id="passportUsername" value="alice" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
-                        </div>
-                    </div>
-
-                    <button id="simulatePassportHandshakeBtn" class="w-full btn-anthro text-xs">
-                        <span>Generate Passport Payload</span>
-                        <span class="font-mono">→</span>
-                    </button>
-
-                    <div id="passportResultBox" class="hidden p-3 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono">
-                        <pre id="passportJsonText" class="text-[10px] text-anthro-dark overflow-x-auto whitespace-pre-wrap break-all"></pre>
-                    </div>
-                </div>
-
             </div>
 
             <!-- SSO Token Payload Inspector -->
@@ -458,56 +396,6 @@
         </section>
 
     </main>
-
-    <!-- LINK INSTANCE MODAL -->
-    <div id="linkInstanceModal" class="fixed inset-0 bg-anthro-dark/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white border border-anthro-dark/15 rounded-2xl max-w-lg w-full p-8 space-y-6 shadow-2xl relative">
-            <div class="flex items-center justify-between border-b border-anthro-dark/10 pb-4">
-                <h3 class="font-serif font-medium text-xl text-anthro-dark">
-                    Link New TuneCamp Instance
-                </h3>
-                <button id="closeLinkInstanceModalBtn" class="text-anthro-muted hover:text-anthro-dark">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <!-- Tab Switcher -->
-            <div class="flex border-b border-anthro-dark/10 text-xs font-mono">
-                <button id="modalTabSignBtn" class="px-4 py-2 border-b-2 border-anthro-dark text-anthro-dark font-semibold">
-                    Sign Challenge
-                </button>
-                <button id="modalTabImportBtn" class="px-4 py-2 border-b-2 border-transparent text-anthro-muted hover:text-anthro-dark">
-                    Import Passport JSON
-                </button>
-            </div>
-
-            <!-- Tab 1: Sign Challenge Form -->
-            <div id="tabSignContent" class="space-y-4 text-xs">
-                <p class="text-anthro-muted">Paste the Challenge JSON payload issued by your instance to sign it with your master Zen SEA key.</p>
-                <div>
-                    <label class="block font-mono text-[10px] uppercase text-anthro-muted mb-1">Challenge JSON</label>
-                    <textarea id="modalChallengeInput" rows="4" placeholder='{"instanceDomain": "sudorecords.scobrudot.dev", "username": "alice", "nonce": "abc123nonce"}' class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl p-3 font-mono text-xs focus:outline-none focus:border-anthro-dark"></textarea>
-                </div>
-                <button id="modalSignChallengeBtn" class="btn-anthro w-full text-xs justify-between">
-                    <span>Sign Challenge & Issue Passport</span>
-                    <span class="font-mono">→</span>
-                </button>
-            </div>
-
-            <!-- Tab 2: Import Passport JSON Form -->
-            <div id="tabImportContent" class="space-y-4 text-xs hidden">
-                <p class="text-anthro-muted">Paste the raw signed Passport JSON directly to save it into your linked instances list.</p>
-                <div>
-                    <label class="block font-mono text-[10px] uppercase text-anthro-muted mb-1">Passport JSON</label>
-                    <textarea id="modalPassportImportInput" rows="4" placeholder='{"instanceDomain": "sudorecords.scobrudot.dev", "localUsername": "alice", "zenPubKey": "QmZen...", "passportSignature": "..."}' class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl p-3 font-mono text-xs focus:outline-none focus:border-anthro-dark"></textarea>
-                </div>
-                <button id="modalImportPassportBtn" class="btn-anthro w-full text-xs justify-between">
-                    <span>Verify & Save Instance</span>
-                    <span class="font-mono">→</span>
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-anthro-dark text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-xs font-mono">
@@ -538,7 +426,6 @@
         // State
         let currentAlias = "anonymous";
         let currentKeys = { pub: '', priv: '', epub: '', epriv: '' };
-        let linkedInstances = [];
         let wsRelay = null;
         const RELAY_URL = "wss://delay.scobrudot.dev/zen";
 
@@ -608,7 +495,7 @@
             return zenPair({ seed: seedStr });
         }
 
-        // Session & Linked Instances Persistence
+        // Session Persistence
         async function initOrLoadSession() {
             const savedAlias = localStorage.getItem("fid_user_alias");
             const savedPriv = localStorage.getItem("fid_master_priv_key");
@@ -621,216 +508,7 @@
                 await generateRandomKeypair();
             }
 
-            loadLinkedInstances();
             updateDashboardUI();
-        }
-
-        function loadLinkedInstances() {
-            const saved = localStorage.getItem("fid_linked_instances");
-            if (saved) {
-                try {
-                    linkedInstances = JSON.parse(saved);
-                } catch {
-                    linkedInstances = [];
-                }
-            } else {
-                linkedInstances = [
-                    {
-                        instanceDomain: "sudorecords.scobrudot.dev",
-                        localUsername: "alice",
-                        zenPubKey: currentKeys.pub,
-                        issuedAt: Date.now() - 86400000,
-                        passportSignature: "sig_hmac_demo_12345",
-                        publicDataEndpoint: "https://sudorecords.scobrudot.dev/api/auth/zen/user/alice/public"
-                    }
-                ];
-                saveLinkedInstances();
-            }
-            renderLinkedInstances();
-        }
-
-        function saveLinkedInstances() {
-            localStorage.setItem("fid_linked_instances", JSON.stringify(linkedInstances));
-        }
-
-        function renderLinkedInstances() {
-            const grid = document.getElementById("linkedInstancesGrid");
-            const emptyBox = document.getElementById("emptyInstancesBox");
-
-            if (!grid || !emptyBox) return;
-
-            grid.innerHTML = "";
-
-            if (!linkedInstances || linkedInstances.length === 0) {
-                emptyBox.classList.remove("hidden");
-                return;
-            } else {
-                emptyBox.classList.add("hidden");
-            }
-
-            linkedInstances.forEach((inst, index) => {
-                const card = document.createElement("div");
-                card.className = "anthro-card p-8 flex flex-col justify-between space-y-6";
-                card.innerHTML = `
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-start">
-                            <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">FEDERATED PASSPORT</span>
-                            <span class="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">Active</span>
-                        </div>
-                        <h3 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight truncate">${inst.instanceDomain}</h3>
-                        
-                        <div class="space-y-2 pt-2 border-t border-anthro-dark/10 text-xs font-mono">
-                            <div class="flex justify-between">
-                                <span class="text-anthro-muted text-[10px] uppercase font-sans">USER</span>
-                                <span class="text-anthro-dark font-medium">@${inst.localUsername}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-anthro-muted text-[10px] uppercase font-sans">ISSUED</span>
-                                <span class="text-anthro-dark">${new Date(inst.issuedAt).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-4 border-t border-anthro-dark/10 flex justify-between items-center">
-                        <button id="verify-inst-${index}" class="text-xs font-mono font-medium text-anthro-dark hover:underline">
-                            Verify →
-                        </button>
-                        <div class="flex gap-3">
-                            <button id="copy-inst-${index}" class="text-xs font-mono text-anthro-muted hover:text-anthro-dark">Copy</button>
-                            <button id="unlink-inst-${index}" class="text-xs font-mono text-rose-700 hover:underline">Unlink</button>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-
-                // Add event listeners for dynamic item buttons
-                document.getElementById(`verify-inst-${index}`)?.addEventListener('click', () => verifyInstanceBackend(inst.instanceDomain, inst.localUsername, index));
-                document.getElementById(`copy-inst-${index}`)?.addEventListener('click', () => copyPassportJson(index));
-                document.getElementById(`unlink-inst-${index}`)?.addEventListener('click', () => unlinkInstance(index));
-            });
-        }
-
-        async function verifyInstanceBackend(domain, username, index) {
-            const inst = linkedInstances[index];
-            if (!inst) return;
-
-            const protocol = domain.includes('localhost') ? 'http' : 'https';
-            const verifyUrl = `${protocol}://${domain}/api/auth/zen/verify`;
-
-            try {
-                const res = await fetch(verifyUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(inst)
-                });
-                const data = await res.json();
-                if (res.ok && data.valid) {
-                    showToast(`Instance ${domain} verified!`);
-                } else {
-                    showToast(`Instance verified in local session`);
-                }
-            } catch {
-                showToast(`Instance ${domain} verified locally`);
-            }
-        }
-
-        function copyPassportJson(index) {
-            const inst = linkedInstances[index];
-            if (!inst) return;
-            navigator.clipboard.writeText(JSON.stringify(inst, null, 2));
-            showToast("Passport JSON copied");
-        }
-
-        function unlinkInstance(index) {
-            if (confirm("Unlink this instance passport?")) {
-                linkedInstances.splice(index, 1);
-                saveLinkedInstances();
-                renderLinkedInstances();
-                showToast("Instance unlinked");
-            }
-        }
-
-        // Modal Controls & Handlers
-        function openLinkInstanceModal() {
-            document.getElementById("linkInstanceModal")?.classList.remove("hidden");
-        }
-
-        function closeLinkInstanceModal() {
-            document.getElementById("linkInstanceModal")?.classList.add("hidden");
-        }
-
-        function switchLinkTab(tab) {
-            const signBtn = document.getElementById("modalTabSignBtn");
-            const importBtn = document.getElementById("modalTabImportBtn");
-            const signContent = document.getElementById("tabSignContent");
-            const importContent = document.getElementById("tabImportContent");
-
-            if (!signBtn || !importBtn || !signContent || !importContent) return;
-
-            if (tab === 'sign') {
-                signBtn.className = "px-4 py-2 border-b-2 border-anthro-dark text-anthro-dark font-semibold";
-                importBtn.className = "px-4 py-2 border-b-2 border-transparent text-anthro-muted hover:text-anthro-dark";
-                signContent.classList.remove("hidden");
-                importContent.classList.add("hidden");
-            } else {
-                importBtn.className = "px-4 py-2 border-b-2 border-anthro-dark text-anthro-dark font-semibold";
-                signBtn.className = "px-4 py-2 border-b-2 border-transparent text-anthro-muted hover:text-anthro-dark";
-                importContent.classList.remove("hidden");
-                signContent.classList.add("hidden");
-            }
-        }
-
-        async function handleModalSignChallenge() {
-            const raw = document.getElementById("modalChallengeInput")?.value.trim();
-            if (!raw) return;
-
-            try {
-                const challengeObj = JSON.parse(raw);
-                const domain = challengeObj.instanceDomain || "tunecamp-instance.local";
-                const username = challengeObj.username || "user";
-
-                const issuedAt = Date.now();
-                const signaturePayload = `${domain}:${username}:${currentKeys.pub}:${issuedAt}`;
-                const passportSignature = "sig_hmac_" + (await sha256Hex(signaturePayload + ":" + currentKeys.priv)).substring(0, 32);
-
-                const newPassport = {
-                    instanceDomain: domain,
-                    localUsername: username,
-                    zenPubKey: currentKeys.pub,
-                    issuedAt,
-                    passportSignature,
-                    publicDataEndpoint: `https://${domain}/api/auth/zen/user/${username}/public`
-                };
-
-                linkedInstances.push(newPassport);
-                saveLinkedInstances();
-                renderLinkedInstances();
-                closeLinkInstanceModal();
-                showToast(`Instance ${domain} linked!`);
-            } catch {
-                alert("Invalid Challenge JSON.");
-            }
-        }
-
-        function handleModalImportPassport() {
-            const raw = document.getElementById("modalPassportImportInput")?.value.trim();
-            if (!raw) return;
-
-            try {
-                const passportObj = JSON.parse(raw);
-                if (!passportObj.instanceDomain) {
-                    alert("Invalid Passport: missing instanceDomain");
-                    return;
-                }
-
-                linkedInstances.push(passportObj);
-                saveLinkedInstances();
-                renderLinkedInstances();
-                closeLinkInstanceModal();
-                showToast(`Passport for ${passportObj.instanceDomain} imported!`);
-            } catch {
-                alert("Invalid Passport JSON format.");
-            }
         }
 
         // Key Pair & Session Handlers
@@ -922,7 +600,6 @@
                 alias: currentAlias,
                 zenPubKey: currentKeys.pub,
                 masterPrivKey: currentKeys.priv,
-                linkedInstances: linkedInstances,
                 exportedAt: new Date().toISOString()
             };
 
@@ -1062,33 +739,6 @@
             }
         }
 
-        // Passport Handshake Simulation
-        async function simulatePassportHandshake() {
-            const instanceDomain = document.getElementById("passportInstance")?.value.trim();
-            const username = document.getElementById("passportUsername")?.value.trim();
-
-            if (!instanceDomain || !username) return;
-
-            const issuedAt = Date.now();
-            const signaturePayload = `${instanceDomain}:${username}:${currentKeys.pub}:${issuedAt}`;
-            const signature = "sig_hmac_" + (await sha256Hex(signaturePayload + ":" + currentKeys.priv)).substring(0, 32);
-
-            const passport = {
-                instanceDomain,
-                localUsername: username,
-                zenPubKey: currentKeys.pub,
-                issuedAt,
-                passportSignature: signature,
-                publicDataEndpoint: `https://${instanceDomain}/api/auth/zen/user/${username}/public`
-            };
-
-            const box = document.getElementById("passportJsonText");
-            const container = document.getElementById("passportResultBox");
-            if (box) box.textContent = JSON.stringify(passport, null, 2);
-            if (container) container.classList.remove("hidden");
-            showToast("Passport payload generated");
-        }
-
         // SSO Token Generator Preview
         async function generateSsoTokenPreview() {
             const domain = document.getElementById("apDomainInput")?.value.trim() || "sudorecords.scobrudot.dev";
@@ -1215,15 +865,8 @@
             document.getElementById('copyMasterPrivKeyBtn')?.addEventListener('click', () => copyToClipboard('dashMasterPrivKey'));
             document.getElementById('togglePrivateKeyVisibilityBtn')?.addEventListener('click', togglePrivateKeyVisibility);
             document.getElementById('sendP2pPingBtn')?.addEventListener('click', sendP2pPing);
-            document.getElementById('openLinkInstanceModalBtn')?.addEventListener('click', openLinkInstanceModal);
-            document.getElementById('closeLinkInstanceModalBtn')?.addEventListener('click', closeLinkInstanceModal);
-            document.getElementById('modalTabSignBtn')?.addEventListener('click', () => switchLinkTab('sign'));
-            document.getElementById('modalTabImportBtn')?.addEventListener('click', () => switchLinkTab('import'));
-            document.getElementById('modalSignChallengeBtn')?.addEventListener('click', handleModalSignChallenge);
-            document.getElementById('modalImportPassportBtn')?.addEventListener('click', handleModalImportPassport);
             document.getElementById('apDomainInput')?.addEventListener('input', updateApDerivation);
             document.getElementById('apUserInput')?.addEventListener('input', updateApDerivation);
-            document.getElementById('simulatePassportHandshakeBtn')?.addEventListener('click', simulatePassportHandshake);
             document.getElementById('generateSsoTokenPreviewBtn')?.addEventListener('click', generateSsoTokenPreview);
         });
     </script>
