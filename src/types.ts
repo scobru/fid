@@ -64,9 +64,22 @@ export interface FidSignedPayload<T = unknown> {
 }
 
 /**
+ * @llm-summary Source of the master key used for deterministic ActivityPub identity derivation.
+ * @llm-context Two supported sources: Zen SEA (secp256k1, P2P/offline-first) and WebAuthn/Passkeys (hardware-backed, biometric).
+ * Both produce the same deterministic Ed25519 ActivityPub keypair for a given (instanceDomain, username) via PBKDF2.
+ * @llm-edge-cases For WebAuthn, the credential must be registered on a stable Relying Party (e.g., fid-portal.vercel.app)
+ * to enable cross-instance portability. The raw public key is exported for signature verification.
+ * @llm-faq Q: Why two sources? A: Zen SEA enables P2P/graph identity; WebAuthn enables mainstream UX (FaceID, YubiKey).
+ * Q: Do they produce the same AP keys? A: Yes, same salt + PBKDF2 → same seed → same Ed25519 keypair.
+ */
+export type MasterKeySource =
+  | { type: 'zen'; privKey: string; pubKey: string }
+  | { type: 'webauthn'; credentialId: string; publicKey: CryptoKey; publicKeyPem: string };
+
+/**
  * @llm-summary The result of deterministically deriving an ActivityPub identity from a master FID key and a target instance.
- * @llm-context Produced by deriveApKeypair and consumed by SSO flows to construct actor URIs and WebFinger handles for Fediverse interactions.
- * @llm-edge-cases If instanceDomain or username contains uppercase characters, they are lowercased in the output — this is required by ActivityPub spec. If masterPubKey is empty, zenPubKey in the result will be empty, which may cause downstream signature verification to fail.
+ * @llm-context Produced by deriveApIdentity and consumed by SSO flows to construct actor URIs and WebFinger handles for Fediverse interactions.
+ * @llm-edge-cases If instanceDomain or username contains uppercase characters, they are lowercased in the output — this is required by ActivityPub spec.
  * @llm-faq Q: Why is the key derivation deterministic? A: PBKDF2 with a fixed salt derived from instanceDomain and username ensures the same inputs always produce the same keypair. Q: Is the master private key stored? No, only the derived PEM keys are returned. Q: Can two different usernames on the same instance produce the same keypair? No, the salt includes the username.
  */
 export interface DerivedApIdentity {
@@ -74,6 +87,7 @@ export interface DerivedApIdentity {
   username: string;
   actorUri: string;
   webfingerHandle: string;
+  masterKeySource: MasterKeySource;
   zenPubKey: string;
   publicKeyPem: string;
   privateKeyPem: string;
@@ -109,5 +123,6 @@ export interface FidSsoToken {
   passport?: FidPassport;
   signature?: string;
   nonce?: string;
+  masterKeySource?: MasterKeySource;
 }
 

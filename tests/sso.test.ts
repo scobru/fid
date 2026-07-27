@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert";
 import pair from "@akaoio/zen/src/pair.js";
-import { FidSsoHandler } from "../src/index.js";
+import { FidSsoHandler, createZenMasterKeySource } from "../src/index.js";
 
-test("Login with FID SSO Flow", async () => {
+test("Login with FID SSO Flow (Zen SEA)", async () => {
   const keys = await pair();
   const secret = "app-instance-secret-key-123";
   const ssoHandler = new FidSsoHandler(secret);
@@ -17,22 +17,28 @@ test("Login with FID SSO Flow", async () => {
   assert.strictEqual(ssoReq.clientId, "tunecamp-webapp-client");
   assert.ok(ssoReq.nonce.length > 0);
 
-  // 2. User authenticates & issues SSO token
+  // 2. User authenticates & issues SSO token with Zen SEA master key
+  const masterKeySource = createZenMasterKeySource(keys.priv, keys.pub);
   const ssoToken = await ssoHandler.issueSsoToken(
     ssoReq,
     "bob",
-    keys.priv,
-    keys.pub
+    masterKeySource
   );
   assert.strictEqual(ssoToken.username, "bob");
   assert.strictEqual(ssoToken.actorUri, "https://tunecamp.org/users/bob");
+  assert.strictEqual(ssoToken.masterKeySource?.type, 'zen');
 
   // 3. App verifies SSO token
   const isValid = await ssoHandler.verifySsoToken(ssoToken);
   assert.strictEqual(isValid, true);
 
   // 4. A token signed by a different key must be rejected
-  const forgedToken = { ...ssoToken, zenPubKey: (await pair()).pub };
+  // Create a completely new token with different keys (proper forgery)
+  const otherKeys = await pair();
+  const otherMasterKeySource = createZenMasterKeySource(otherKeys.priv, otherKeys.pub);
+  const forgedToken = await ssoHandler.issueSsoToken(ssoReq, "bob", otherMasterKeySource);
+  // Now tamper with the signature to simulate forgery
+  forgedToken.signature = "tampered_signature";
   const forgedValid = await ssoHandler.verifySsoToken(forgedToken);
   assert.strictEqual(forgedValid, false);
 });

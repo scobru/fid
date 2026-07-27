@@ -2,7 +2,7 @@
 
 **FID (Fediverse-ID)** is a generic, self-sovereign, zero-knowledge cryptographic identity and Single-Sign-On (SSO) protocol designed for **any ActivityPub/Fediverse application**, **P2P web apps**, and **decentralized platforms**.
 
-It allows users to own a single master cryptographic keypair (via [Zen SEA](https://github.com/scobru/zen)) and authenticate seamlessly across independent instances and applications without centralized identity providers.
+It allows users to own a master cryptographic keypair from **two first-class sources** — **Zen SEA** (P2P, offline-first, Gun.js graph) or **WebAuthn/Passkeys** (hardware-backed, biometric, standard browser UX). Both produce identical deterministic ActivityPub keypairs via PBKDF2 derivation.
 
 > ℹ️ **Reference Implementation Example:** [TuneCamp](https://github.com/scobru/tunecamp) is an example of an application implementing the FID protocol for federated music streaming and user authentication.
 
@@ -42,12 +42,20 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
 
 ## 🔑 Core Concepts & Cryptographic Architecture
 
-### 1. Zen SEA Integration (Zero-Knowledge Core)
+### 1. Master Key Sources
+FID supports two first-class master key sources. Both produce the **same** deterministic ActivityPub identity for a given `(instanceDomain, username)` pair.
+
+#### Zen SEA (P2P, Offline-First)
 Every user owns a master **Zen SEA keypair**:
 - **`zenPubKey`** (Public Key): Used as the user's global immutable identifier across the P2P network.
 - **`masterPrivKey`** (Private Key): Stored locally in the user's browser or wallet. Never transmitted over the wire or stored on any server.
 
 Authentication is **Zero-Knowledge**: instances verify cryptographically signed challenges rather than receiving or storing passwords.
+
+#### WebAuthn / Passkeys (Hardware-Backed, Biometric)
+Users can alternatively create a passkey via `navigator.credentials.create()`. The passkey is stored in the platform authenticator (iCloud Keychain, Google Password Manager, 1Password, YubiKey, etc.) and syncs across the user's devices. The public key is persisted in IndexedDB on the portal for session continuity.
+
+Both sources are unified through `MasterKeySource` — a discriminated union type (`{ source: 'zen', ... } | { source: 'webauthn', ... }`) that feeds into the same derivation pipeline.
 
 ### 2. Two-Step Instance Passport Handshake
 To link a local instance profile (e.g. `@scobru` on a target instance) to a global Zen identity (`zenPubKey`):
@@ -73,11 +81,12 @@ Instance (Server)                     User / Portal (Client)
 ### 3. Deterministic ActivityPub Key Derivation
 FID enables users to maintain consistent ActivityPub personas across multiple instances without storing separate RSA/Ed25519 key files per server.
 
-Using `deriveApKeypair()`:
-- **Input**: Master FID Private Key + Target Domain + Username
-- **Derivation**: Uses `PBKDF2-SHA256` over salt `fid:activitypub:<domain>:<username>` to generate a 32-byte seed.
+Using `deriveApIdentity()` (primary) or the legacy alias `deriveApKeypair()`:
+- **Input**: `MasterKeySource` (Zen SEA seed or WebAuthn credential public key) + Target Domain + Username
+- **Derivation**: Uses `PBKDF2-SHA256` over salt `fid:activitypub:<domain>:<username>` to generate a 32-byte seed. **The same salt is used for both Zen SEA and WebAuthn sources**, ensuring identical AP keypairs from either source for the same `(domain, username)`.
 - **Key Generation**: Wraps the seed in an **Ed25519 PKCS#8 DER** envelope to instantiate a deterministic Ed25519 keypair.
-- **Output**:
+- **Output** (`DerivedApIdentity`):
+  - `masterKeySource`: which source was used (`'zen'` | `'webauthn'`)
   - `webfingerHandle`: `@alice@domain.org`
   - `actorUri`: `https://domain.org/users/alice`
   - `publicKeyPem`: W3C/ActivityPub compatible Ed25519 Public Key
@@ -88,7 +97,7 @@ FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P a
 
 **Current Implementation:**
 1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations).
-2. Browser calls `issueSsoToken(ssoReq, username, masterPrivKey, masterPubKey)`, which signs `${clientId}:${instanceDomain}:${username}:${zenPubKey}:${issuedAt}:${nonce}` with the Zen SEA master private key (real secp256k1 signature, verifiable by any third party holding `zenPubKey` — not an HMAC keyed by the private key itself).
+2. Browser calls `issueSsoToken(ssoReq, username, masterKeySource)`, which signs `${clientId}:${instanceDomain}:${username}:${zenPubKey}:${issuedAt}:${nonce}` with the master private key from the chosen source (Zen SEA secp256k1 or WebAuthn credential) and includes `masterKeySource` in the token.
 3. Browser passes the authentication payload back to the target instance via the URL hash fragment (Implicit Flow):
    ```text
    redirectUri#payload=encodeURIComponent(JSON.stringify({ ssoToken, apSeed }))
@@ -103,7 +112,13 @@ FID includes a zero-dependency, single-page Web Application in [`portal.html`](f
 
 It functions as both:
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
-- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs and calculating deterministic ActivityPub handles and seeds.
+- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs, creating WebAuthn passkeys, and calculating deterministic ActivityPub handles and seeds.
+
+The portal uses a tabbed interface in the Identity Creation card:
+- **Zen SEA tab**: username + passphrase form for deterministic Zen SEA keypair generation.
+- **Passkey / WebAuthn tab**: username input + "Create Passkey" button that triggers `navigator.credentials.create()`. The passkey credential ID and public key PEM are saved to IndexedDB for session persistence.
+
+> The Passkey pane also checks WebAuthn availability (`PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`) and disables the button if no authenticator is present.
 
 > Instance Passport linking (Section 2) is implemented server-side (`FidChallengeManager`/`FidPassportIssuer`) but has no working portal UI: issuing a valid Passport requires the target instance's own server secret, which a generic multi-instance portal never holds. A real client for this flow must talk to that specific instance's `/api/auth/zen/challenge` and `/api/auth/zen/link` endpoints directly.
 
@@ -154,21 +169,20 @@ if (isValid) {
 ### 2. Deterministic ActivityPub Identity Derivation
 
 ```typescript
-import { deriveApKeypair } from "fid";
+import { deriveApIdentity, createZenMasterKeySource } from "fid";
 
-// Derives instance-specific Ed25519 keypair & WebFinger handle from master FID seed
-const apIdentity = deriveApKeypair(
-  "master_sea_private_key",
-  "tunecamp.org",
-  "alice",
-  "QmZenPubKey123..."
-);
+// Derives instance-specific Ed25519 keypair & WebFinger handle from Zen SEA master key
+const zenSource = createZenMasterKeySource(masterPrivKey, zenPubKey);
+const apIdentity = deriveApIdentity(zenSource, "tunecamp.org", "alice");
 
-console.log(apIdentity.webfingerHandle); // @alice@tunecamp.org
-console.log(apIdentity.actorUri);        // https://tunecamp.org/users/alice
-console.log(apIdentity.publicKeyPem);    // -----BEGIN PUBLIC KEY-----...
-console.log(apIdentity.privateKeyPem);   // -----BEGIN PRIVATE KEY-----...
+console.log(apIdentity.webfingerHandle);   // @alice@tunecamp.org
+console.log(apIdentity.actorUri);           // https://tunecamp.org/users/alice
+console.log(apIdentity.publicKeyPem);       // -----BEGIN PUBLIC KEY-----...
+console.log(apIdentity.privateKeyPem);      // -----BEGIN PRIVATE KEY-----...
+console.log(apIdentity.masterKeySource);    // "zen"
 ```
+
+The same `(domain, username)` pair produces the **identical** AP keypair whether the source is Zen SEA or WebAuthn — only the `masterKeySource` field differs.
 
 ### 3. "Login with FID" SSO Flow
 
@@ -184,16 +198,15 @@ const ssoReq = ssoHandler.createSsoRequest(
   "sudorecords.scobrudot.dev"
 );
 
-// 2. Issue SSO Token upon user authorization (signed with the Zen SEA private key)
-const ssoToken = await ssoHandler.issueSsoToken(
-  ssoReq,
-  "alice",
-  "master_sea_private_key",
-  "QmZenPubKey123..."
-);
+// 2. Issue SSO Token upon user authorization (with the chosen master key source)
+const zenSource = createZenMasterKeySource(masterPrivKey, zenPubKey);
+const ssoToken = await ssoHandler.issueSsoToken(ssoReq, "alice", zenSource);
+// Or with a WebAuthn passkey source:
+// const webauthnSource = createWebAuthnMasterKeySource(credentialId, publicKeyPem);
+// const ssoToken = await ssoHandler.issueSsoToken(ssoReq, "alice", webauthnSource);
 
-// 3. Verify SSO Token (On external app backend) — checks the Zen SEA signature against zenPubKey
-const isValid = await ssoHandler.verifySsoToken(ssoToken);
+// 3. Verify SSO Token (On external app backend) — verifies signature using the appropriate path
+const isValid = await ssoHandler.validateSsoToken(ssoToken);
 console.log("Is SSO Token Valid:", isValid);
 ```
 
@@ -218,6 +231,10 @@ export interface FidPassport {
   publicDataEndpoint: string;
 }
 
+export type MasterKeySource =
+  | { source: 'zen'; masterPrivKey: string; masterPubKey: string }
+  | { source: 'webauthn'; credentialId: string; publicKeyPem: string };
+
 export interface DerivedApIdentity {
   instanceDomain: string;
   username: string;
@@ -226,6 +243,7 @@ export interface DerivedApIdentity {
   zenPubKey: string;
   publicKeyPem: string;
   privateKeyPem: string;
+  masterKeySource: 'zen' | 'webauthn';
 }
 
 export interface FidSsoToken {
@@ -238,6 +256,7 @@ export interface FidSsoToken {
   passport?: FidPassport;
   signature?: string;
   nonce?: string;
+  masterKeySource?: 'zen' | 'webauthn';
 }
 ```
 

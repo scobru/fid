@@ -202,33 +202,62 @@
             <!-- 3 Column Anthropic-Style Card Layout -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-                <!-- Card 1: User+Pass Pair Creation -->
+                <!-- Card 1: Identity Creation (Zen SEA + Passkey) -->
                 <div class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
                         <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">IDENTITY CREATION</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
-                            User & Pass Pair
+                            Master Key Source
                         </h2>
                         <p class="text-anthro-muted text-xs leading-relaxed">
-                            Deriva la tua coppia di chiavi Zen SEA in modo deterministico partendo dal tuo username e passphrase segreta.
+                            Scegli la sorgente della tua master key. Entrambe producono la stessa identità ActivityPub deterministica per dominio/username.
                         </p>
 
-                        <form id="userPassForm" class="space-y-3 pt-2">
+                        <!-- Tabs -->
+                        <div class="flex gap-2 border-b border-anthro-dark/10 mb-4" role="tablist">
+                            <button id="tabZen" role="tab" aria-selected="true" class="px-3 py-2 text-xs font-mono text-anthro-dark border-b-2 border-anthro-dark font-medium">Zen SEA</button>
+                            <button id="tabPasskey" role="tab" aria-selected="false" class="px-3 py-2 text-xs font-mono text-anthro-muted border-b-2 border-transparent hover:text-anthro-dark">Passkey / WebAuthn</button>
+                        </div>
+
+                        <!-- Zen SEA Pane -->
+                        <div id="zenPane" role="tabpanel">
+                            <form id="userPassForm" class="space-y-3 pt-2">
+                                <div>
+                                    <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
+                                    <input type="text" id="userInput" required placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Passphrase Segreta</label>
+                                    <input type="password" id="passInput" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                </div>
+
+                                <button type="submit" class="w-full btn-anthro text-xs mt-2">
+                                    <span>Authenticate Pair</span>
+                                    <span class="font-mono">→</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Passkey Pane -->
+                        <div id="passkeyPane" role="tabpanel" hidden class="space-y-3 pt-2">
                             <div>
                                 <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
-                                <input type="text" id="userInput" required placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                <input type="text" id="pkUserInput" required placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
                             </div>
 
-                            <div>
-                                <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Passphrase Segreta</label>
-                                <input type="password" id="passInput" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                            <div class="p-3 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs text-anthro-muted">
+                                <p class="font-medium mb-1">Crea una Passkey</p>
+                                <p>Usa FaceID, TouchID, Windows Hello o una security key (YubiKey). La passkey viene salvata nel tuo gestore credenziali (iCloud Keychain, Google Password Manager, 1Password, ecc.) e sincronizzata sui tuoi dispositivi.</                            </p>
                             </div>
 
-                            <button type="submit" class="w-full btn-anthro text-xs mt-2">
-                                <span>Authenticate Pair</span>
+                            <button id="createPasskeyBtn" class="w-full btn-anthro text-xs" disabled>
+                                <span><i class="fa-solid fa-fingerprint mr-2"></i>Crea Passkey</span>
                                 <span class="font-mono">→</span>
                             </button>
-                        </form>
+
+                            <div id="passkeyInfo" class="hidden p-3 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark"></div>
+                        </div>
                     </div>
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
@@ -238,7 +267,7 @@
                         </div>
                         <div class="flex justify-between text-anthro-dark/50">
                             <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">METHOD</span>
-                            <span class="text-anthro-dark font-medium">Zen SEA (Gun/PBKDF2)</span>
+                            <span id="methodBadge" class="text-anthro-dark font-medium">Zen SEA (Gun/PBKDF2)</span>
                         </div>
                     </div>
                 </div>
@@ -868,6 +897,175 @@
             document.getElementById('apDomainInput')?.addEventListener('input', updateApDerivation);
             document.getElementById('apUserInput')?.addEventListener('input', updateApDerivation);
             document.getElementById('generateSsoTokenPreviewBtn')?.addEventListener('click', generateSsoTokenPreview);
+
+            // Tab Switching
+            const tabZen = document.getElementById('tabZen');
+            const tabPasskey = document.getElementById('tabPasskey');
+            const zenPane = document.getElementById('zenPane');
+            const passkeyPane = document.getElementById('passkeyPane');
+            const methodBadge = document.getElementById('methodBadge');
+
+            function switchTab(tab) {
+                if (tab === 'zen') {
+                    tabZen.className = 'px-3 py-2 text-xs font-mono text-anthro-dark border-b-2 border-anthro-dark font-medium';
+                    tabZen.setAttribute('aria-selected', 'true');
+                    tabPasskey.className = 'px-3 py-2 text-xs font-mono text-anthro-muted border-b-2 border-transparent hover:text-anthro-dark';
+                    tabPasskey.setAttribute('aria-selected', 'false');
+                    zenPane.hidden = false;
+                    passkeyPane.hidden = true;
+                    if (methodBadge) methodBadge.textContent = 'Zen SEA (Gun/PBKDF2)';
+                } else {
+                    tabPasskey.className = 'px-3 py-2 text-xs font-mono text-anthro-dark border-b-2 border-anthro-dark font-medium';
+                    tabPasskey.setAttribute('aria-selected', 'true');
+                    tabZen.className = 'px-3 py-2 text-xs font-mono text-anthro-muted border-b-2 border-transparent hover:text-anthro-dark';
+                    tabZen.setAttribute('aria-selected', 'false');
+                    zenPane.hidden = true;
+                    passkeyPane.hidden = false;
+                    if (methodBadge) methodBadge.textContent = 'Passkey / WebAuthn';
+                    checkPasskeyAvailability();
+                }
+            }
+
+            tabZen?.addEventListener('click', () => switchTab('zen'));
+            tabPasskey?.addEventListener('click', () => switchTab('passkey'));
+
+            // Passkey / WebAuthn Registration
+            let pkPublicKeyPem = null;
+
+            async function checkPasskeyAvailability() {
+                const btn = document.getElementById('createPasskeyBtn');
+                if (!btn) return;
+                if (!window.PublicKeyCredential) {
+                    btn.disabled = true;
+                    btn.querySelector('span').innerHTML = '<i class="fa-solid fa-lock mr-2"></i>Non Supportato';
+                    return;
+                }
+                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                if (!available) {
+                    btn.disabled = true;
+                    btn.querySelector('span').innerHTML = '<i class="fa-solid fa-lock mr-2"></i>No Authenticator';
+                    return;
+                }
+                btn.disabled = false;
+                btn.querySelector('span').innerHTML = '<i class="fa-solid fa-fingerprint mr-2"></i>Crea Passkey';
+            }
+
+            async function handlePasskeyRegistration() {
+                const username = document.getElementById('pkUserInput')?.value.trim();
+                if (!username) {
+                    alert('Inserisci un username per la passkey.');
+                    return;
+                }
+
+                const btn = document.getElementById('createPasskeyBtn');
+                if (btn) btn.disabled = true;
+
+                try {
+                    const rpId = window.location.hostname || 'fid-portal.vercel.app';
+                    const userId = new TextEncoder().encode(username + '@' + rpId);
+
+                    const publicKey = {
+                        challenge: crypto.getRandomValues(new Uint8Array(32)),
+                        rp: { name: 'FID Protocol', id: rpId },
+                        user: { id: userId, name: username, displayName: username },
+                        pubKeyCredParams: [
+                            { type: 'public-key', alg: -7 },
+                            { type: 'public-key', alg: -257 }
+                        ],
+                        authenticatorSelection: {
+                            authenticatorAttachment: 'platform',
+                            userVerification: 'required'
+                        },
+                        timeout: 60000
+                    };
+
+                    const credential = await navigator.credentials.create({ publicKey });
+
+                    const pubKeyPem = await extractPublicKeyPem(credential);
+                    pkPublicKeyPem = pubKeyPem;
+
+                    // Store in IndexedDB
+                    await storePasskeyCredential(rpId, username, credential.id, pubKeyPem);
+
+                    // Derive AP keypair from passkey
+                    const apSeed = 'fid:activitypub:' + rpId + ':' + username;
+                    const seedBuf = new TextEncoder().encode(apSeed);
+                    const derivedKey = await crypto.subtle.deriveBits(
+                        { name: 'PBKDF2', salt: seedBuf, iterations: 100000, hash: 'SHA-256' },
+                        await crypto.subtle.importKey('raw', new Uint8Array(credential.response.authenticatorData).slice(-32), 'PBKDF2', false, ['deriveBits']),
+                        256
+                    );
+
+                    // Show result
+                    const infoDiv = document.getElementById('passkeyInfo');
+                    if (infoDiv) {
+                        infoDiv.classList.remove('hidden');
+                        infoDiv.innerHTML = `<p class="font-semibold mb-1">Passkey creata!</p>
+                            <p>Credential ID: <span class="break-all">${credential.id}</span></p>
+                            <p>Public Key: <span class="break-all text-[10px]">${pubKeyPem}</span></p>
+                            <p class="text-emerald-700 mt-1">Identità ActivityPub pronta per @${username} su ${rpId}</p>`;
+                    }
+
+                    if (btn) btn.disabled = false;
+                    showToast('Passkey creata con successo!');
+                } catch (err) {
+                    console.error('[FID] Passkey registration failed:', err);
+                    if (btn) btn.disabled = false;
+                    alert('Registrazione passkey fallita: ' + err.message);
+                }
+            }
+
+            async function extractPublicKeyPem(credential) {
+                const authData = new Uint8Array(credential.response.authenticatorData);
+                const publicKeyBytes = authData.slice(-32);
+                const spki = await crypto.subtle.exportKey('spki', await crypto.subtle.importKey('raw', publicKeyBytes, { name: 'Ed25519' }, false, []));
+                const base64 = btoa(String.fromCharCode(...new Uint8Array(spki)));
+                return '-----BEGIN PUBLIC KEY-----\n' + base64.match(/.{1,64}/g).join('\n') + '\n-----END PUBLIC KEY-----';
+            }
+
+            function openDB() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open('fid_passkeys', 1);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('credentials')) {
+                            db.createObjectStore('credentials', { keyPath: 'id' });
+                        }
+                    };
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            }
+
+            async function storePasskeyCredential(rpId, username, credentialId, publicKeyPem) {
+                const db = await openDB();
+                const tx = db.transaction('credentials', 'readwrite');
+                tx.objectStore('credentials').put({
+                    id: rpId + ':' + username,
+                    rpId,
+                    username,
+                    credentialId,
+                    publicKeyPem,
+                    createdAt: new Date().toISOString()
+                });
+                return new Promise((resolve, reject) => {
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            }
+
+            async function loadPasskeyCredential(rpId, username) {
+                const db = await openDB();
+                const tx = db.transaction('credentials', 'readonly');
+                const store = tx.objectStore('credentials');
+                const req = store.get(rpId + ':' + username);
+                return new Promise((resolve, reject) => {
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            }
+
+            document.getElementById('createPasskeyBtn')?.addEventListener('click', handlePasskeyRegistration);
         });
     </script>
 </body>
