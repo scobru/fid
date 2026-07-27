@@ -66,8 +66,8 @@ Instance (Server)                     User / Portal (Client)
 ```
 
 1. **Challenge Generation**: The instance issues a timestamped one-time challenge `{ instanceDomain, username, nonce, timestamp }` using `FidChallengeManager`.
-2. **SEA Signature**: The user signs the challenge payload with their Zen SEA key (`SEA.sign`).
-3. **Verification & Passport Issuance**: The instance verifies the signature, consumes the nonce, and issues a cryptographic **Instance Passport Badge** (`FidPassport`) signed with the instance secret using `FidPassportIssuer`.
+2. **SEA Signature**: The user signs `${username}:${nonce}` with their Zen SEA private key (`signPayload`, backed by `@akaoio/zen`).
+3. **Verification & Passport Issuance**: The instance calls `consumeChallenge(username, nonce, signature, zenPubKey)`, which verifies the Zen SEA signature against `zenPubKey` (real secp256k1 verification, not just nonce presence) before consuming the nonce and issuing a cryptographic **Instance Passport Badge** (`FidPassport`) signed with the instance secret using `FidPassportIssuer`.
 4. **Public Identity Federation**: The instance exposes a public profile JSON (`/api/auth/zen/user/:username/public`) for cross-instance discovery.
 
 ### 3. Deterministic ActivityPub Key Derivation
@@ -86,14 +86,14 @@ Using `deriveApKeypair()`:
 ### 4. "Login with FID" SSO Protocol
 FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P apps.
 
-**Current Implementation (Simplified):**
+**Current Implementation:**
 1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations).
-2. Browser generates an `FidSsoToken` (HMAC-SHA256 signed using Web Crypto) containing `clientId`, `instanceDomain`, `username`, `zenPubKey`, `issuedAt`, `signature`, and `nonce`.
+2. Browser calls `issueSsoToken(ssoReq, username, masterPrivKey, masterPubKey)`, which signs `${clientId}:${instanceDomain}:${username}:${zenPubKey}:${issuedAt}:${nonce}` with the Zen SEA master private key (real secp256k1 signature, verifiable by any third party holding `zenPubKey` — not an HMAC keyed by the private key itself).
 3. Browser passes the authentication payload back to the target instance via the URL hash fragment (Implicit Flow):
    ```text
    redirectUri#payload=encodeURIComponent(JSON.stringify({ ssoToken, apSeed }))
    ```
-4. Target instance backend (Node.js) uses `FidSsoHandler.validateSsoToken(ssoToken)` to verify fields, token age (max 15 min), and signatures, validates `apSeed` length (32 bytes), wraps `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and registers/logs in the user.
+4. Target instance backend (Node.js) uses `await FidSsoHandler.validateSsoToken(ssoToken)` to verify required fields, token age (max 15 min), and the Zen SEA signature against `ssoToken.zenPubKey`, validates `apSeed` length (32 bytes), wraps `apSeed` into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and registers/logs in the user.
 
 **Browser/Web Client Considerations:**
 Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API, which is why the `apSeed` derivation is done client-side and the Ed25519 key wrapping is done server-side.
@@ -124,7 +124,7 @@ npm install git+https://github.com/scobru/fid.git
 ### 1. Challenge Generation & Passport Issuance (Server)
 
 ```typescript
-import { FidChallengeManager, FidPassportIssuer } from "fid";
+import { FidChallengeManager, FidPassportIssuer, signPayload } from "fid";
 
 const challengeMgr = new FidChallengeManager(10, 5); // 10 min TTL, 5 min cleanup
 const passportIssuer = new FidPassportIssuer("your-instance-secret-key");
@@ -132,11 +132,14 @@ const passportIssuer = new FidPassportIssuer("your-instance-secret-key");
 // 1. Generate challenge for user
 const challenge = challengeMgr.createChallenge("alice", "sudorecords.scobrudot.dev");
 
-// 2. Verify and consume one-time challenge nonce
-const isValid = challengeMgr.consumeChallenge("alice", challenge.nonce);
+// 2. Client signs `${username}:${nonce}` with its Zen SEA private key
+const signature = await signPayload(`alice:${challenge.nonce}`, aliceMasterPrivKey);
+
+// 3. Verify the signature and consume the one-time challenge nonce
+const isValid = await challengeMgr.consumeChallenge("alice", challenge.nonce, signature, "QmZenPubKey123...");
 
 if (isValid) {
-  // 3. Issue signed Instance Passport
+  // 4. Issue signed Instance Passport
   const passport = passportIssuer.issuePassport(
     "sudorecords.scobrudot.dev",
     "alice",
@@ -179,16 +182,16 @@ const ssoReq = ssoHandler.createSsoRequest(
   "sudorecords.scobrudot.dev"
 );
 
-// 2. Issue SSO Token upon user authorization
-const ssoToken = ssoHandler.issueSsoToken(
+// 2. Issue SSO Token upon user authorization (signed with the Zen SEA private key)
+const ssoToken = await ssoHandler.issueSsoToken(
   ssoReq,
   "alice",
   "master_sea_private_key",
   "QmZenPubKey123..."
 );
 
-// 3. Verify SSO Token (On external app backend)
-const isValid = ssoHandler.verifySsoToken(ssoToken);
+// 3. Verify SSO Token (On external app backend) — checks the Zen SEA signature against zenPubKey
+const isValid = await ssoHandler.verifySsoToken(ssoToken);
 console.log("Is SSO Token Valid:", isValid);
 ```
 
@@ -224,16 +227,19 @@ export interface DerivedApIdentity {
 }
 
 export interface FidSsoToken {
-  clientId: string;
-  instanceDomain: string;
+  clientId?: string;
+  instanceDomain?: string;
   username: string;
   zenPubKey: string;
-  actorUri: string;
+  actorUri?: string;
   issuedAt: number;
-  passport: FidPassport;
-  signature: string;
+  passport?: FidPassport;
+  signature?: string;
+  nonce?: string;
 }
 ```
+
+`clientId`, `instanceDomain`, `signature`, and `nonce` are required for `validateSsoToken`/`verifySsoToken` to succeed — they're typed as optional only to allow constructing partial tokens before signing.
 
 ---
 

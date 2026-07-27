@@ -1,4 +1,4 @@
-import { generateNonce } from "../crypto/sea.js";
+import { generateNonce, verifySignature } from "../crypto/sea.js";
 import type { ActiveChallenge, FidChallenge } from "../types.js";
 
 export class FidChallengeManager {
@@ -27,7 +27,7 @@ export class FidChallengeManager {
     };
   }
 
-  public consumeChallenge(username: string, nonce: string): boolean {
+  public async consumeChallenge(username: string, nonce: string, signature: string, zenPubKey: string): Promise<boolean> {
     const challengeKey = `${username}:${nonce}`;
     const stored = this.activeChallenges.get(challengeKey);
 
@@ -37,6 +37,11 @@ export class FidChallengeManager {
 
     if (Date.now() - stored.timestamp > this.ttlMs) {
       this.activeChallenges.delete(challengeKey);
+      return false;
+    }
+
+    const verified = await verifySignature(challengeKey, signature, zenPubKey);
+    if (!verified) {
       return false;
     }
 

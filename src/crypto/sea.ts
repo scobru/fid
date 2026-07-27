@@ -1,31 +1,29 @@
 import crypto from "node:crypto";
+import zenSign from "@akaoio/zen/src/sign.js";
+import zenVerify from "@akaoio/zen/src/verify.js";
 
 /**
  * Zen SEA Cryptographic Helper Interface
- * Native WebCrypto / Node Crypto wrapper for SEA challenge signing and verification
+ * Real secp256k1 sign/verify backed by @akaoio/zen (scobru/zen fork).
  */
 
 export function generateNonce(lengthBytes: number = 16): string {
   return crypto.randomBytes(lengthBytes).toString("hex");
 }
 
-export function hashPayload(data: string): string {
-  return crypto.createHash("sha256").update(data).digest("hex");
+/** Signs a payload with a Zen SEA private key. Used by clients holding the master key. */
+export async function signPayload(payload: string, priv: string): Promise<string> {
+  return zenSign(payload, { priv });
 }
 
-export function verifySeaChallenge(
-  challengeData: string,
-  seaSignature: string,
-  pubKey: string
-): boolean {
-  if (!challengeData || !seaSignature || !pubKey) {
+/** Verifies a Zen SEA signature was produced by the private key matching `pubKey` over `payload`. */
+export async function verifySignature(payload: string, signature: string, pubKey: string): Promise<boolean> {
+  if (!payload || !signature || !pubKey) {
     return false;
   }
-  // In SEA, signatures can be json strings or raw ECDSA buffers.
-  // Basic validation check for valid SEA key & non-empty signature payload
   try {
-    const hashed = hashPayload(challengeData);
-    return hashed.length === 64 && pubKey.length > 10 && seaSignature.length > 10;
+    const decoded = await zenVerify(signature, pubKey);
+    return decoded === payload;
   } catch {
     return false;
   }

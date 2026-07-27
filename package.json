@@ -1,6 +1,6 @@
 {
   "name": "fid",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "FID (Fediverse-ID) - Zero-Knowledge P2P & Fediverse Decentralized Authentication Library powered by Zen SEA",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -24,6 +24,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/scobru/fid.git"
+  },
+  "dependencies": {
+    "@akaoio/zen": "github:scobru/zen"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",

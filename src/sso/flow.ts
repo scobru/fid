@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
-import { Buffer } from "node:buffer";
 import { deriveApKeypair } from "../crypto/derivation.js";
 import { FidPassportIssuer } from "../server/passport.js";
-import type { FidPassport, FidSsoRequest, FidSsoToken } from "../types.js";
+import { signPayload, verifySignature } from "../crypto/sea.js";
+import type { FidSsoRequest, FidSsoToken } from "../types.js";
 
 export class FidSsoHandler {
   private secret: string;
@@ -35,18 +35,18 @@ export class FidSsoHandler {
   /**
    * Issues an SSO Token after user unlocks their FID and confirms login
    */
-  public issueSsoToken(
+  public async issueSsoToken(
     ssoReq: FidSsoRequest,
     username: string,
     masterPrivKey: string,
     masterPubKey: string
-  ): FidSsoToken {
+  ): Promise<FidSsoToken> {
     const issuedAt = Date.now();
     const apIdentity = deriveApKeypair(masterPrivKey, ssoReq.instanceDomain, username, masterPubKey);
     const passport = this.passportIssuer.issuePassport(ssoReq.instanceDomain, username, masterPubKey);
 
     const tokenPayload = `${ssoReq.clientId}:${ssoReq.instanceDomain}:${username}:${masterPubKey}:${issuedAt}:${ssoReq.nonce}`;
-    const signature = crypto.createHmac("sha256", masterPrivKey).update(tokenPayload).digest("hex");
+    const signature = await signPayload(tokenPayload, masterPrivKey);
 
     return {
       clientId: ssoReq.clientId,
@@ -55,6 +55,7 @@ export class FidSsoHandler {
       zenPubKey: masterPubKey,
       actorUri: apIdentity.actorUri,
       issuedAt,
+      nonce: ssoReq.nonce,
       passport,
       signature
     };
@@ -63,17 +64,23 @@ export class FidSsoHandler {
   /**
    * Validates an incoming SSO Token on the target Fediverse app and returns detailed result
    */
-  public validateSsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): { valid: boolean; error?: string } {
+  public async validateSsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): Promise<{ valid: boolean; error?: string }> {
     if (!token) {
       return { valid: false, error: "Missing token payload" };
     }
 
-    if (!token.username || !token.issuedAt || !token.zenPubKey) {
-      return { valid: false, error: "Missing required ssoToken fields (username, issuedAt, zenPubKey)" };
+    if (!token.username || !token.issuedAt || !token.zenPubKey || !token.signature || !token.clientId || !token.instanceDomain || !token.nonce) {
+      return { valid: false, error: "Missing required ssoToken fields (username, issuedAt, zenPubKey, signature, clientId, instanceDomain, nonce)" };
     }
 
     if (Date.now() - token.issuedAt > maxAgeMs) {
       return { valid: false, error: "SSO token expired" };
+    }
+
+    const tokenPayload = `${token.clientId}:${token.instanceDomain}:${token.username}:${token.zenPubKey}:${token.issuedAt}:${token.nonce}`;
+    const signatureValid = await verifySignature(tokenPayload, token.signature, token.zenPubKey);
+    if (!signatureValid) {
+      return { valid: false, error: "Invalid SSO token signature" };
     }
 
     if (token.passport) {
@@ -89,7 +96,7 @@ export class FidSsoHandler {
   /**
    * Verifies an incoming SSO Token on the target Fediverse app
    */
-  public verifySsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): boolean {
-    return this.validateSsoToken(token, maxAgeMs).valid;
+  public async verifySsoToken(token: Partial<FidSsoToken>, maxAgeMs: number = 15 * 60 * 1000): Promise<boolean> {
+    return (await this.validateSsoToken(token, maxAgeMs)).valid;
   }
 }
