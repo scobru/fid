@@ -20,13 +20,13 @@
                 extend: {
                     colors: {
                         anthro: {
-                            bg: '#f6f3ed',
-                            card: '#e8e1d5',
-                            cardHover: '#e3dcce',
-                            dark: '#141414',
-                            muted: '#686154',
-                            border: '#dad2c3',
-                            accent: '#0f766e',
+                            bg: '#f5f1e8',
+                            card: '#ebe3d5',
+                            cardHover: '#e0d6c6',
+                            dark: '#1a1a1a',
+                            muted: '#5a5348',
+                            border: '#d0c5b3',
+                            accent: '#0d6b63',
                         }
                     },
                     fontFamily: {
@@ -40,12 +40,12 @@
     </script>
     <style>
         body {
-            background-color: #f6f3ed;
-            color: #141414;
+            background-color: #f5f1e8;
+            color: #1a1a1a;
         }
         .anthro-card {
-            background-color: #e8e1d5;
-            border: 1px solid rgba(20, 20, 20, 0.08);
+            background-color: #ebe3d5;
+            border: 1px solid rgba(26, 26, 26, 0.10);
             border-radius: 1.25rem;
             transition: all 0.2s ease;
         }
@@ -53,7 +53,7 @@
             border-color: rgba(20, 20, 20, 0.18);
         }
         .btn-anthro {
-            background-color: #141414;
+            background-color: #1a1a1a;
             color: #ffffff;
             border-radius: 9999px;
             padding: 0.625rem 1.25rem;
@@ -69,8 +69,8 @@
         }
         .btn-anthro-outline {
             background-color: transparent;
-            color: #141414;
-            border: 1px solid rgba(20, 20, 20, 0.25);
+            color: #1a1a1a;
+            border: 1px solid rgba(26, 26, 26, 0.25);
             border-radius: 9999px;
             padding: 0.5rem 1rem;
             font-weight: 500;
@@ -78,8 +78,8 @@
             cursor: pointer;
         }
         .btn-anthro-outline:hover {
-            border-color: #141414;
-            background-color: rgba(20, 20, 20, 0.03);
+            border-color: #1a1a1a;
+            background-color: rgba(26, 26, 26, 0.04);
         }
     </style>
 </head>
@@ -89,7 +89,7 @@
     <header class="px-6 lg:px-12 py-6 flex items-center justify-between border-b border-anthro-dark/10">
         <div class="flex items-center gap-4">
             <span class="font-serif text-2xl font-bold tracking-tight text-anthro-dark">AI</span>
-            <span class="text-anthro-dark/30 text-lg">|</span>
+            <span class="text-anthro-dark/40 text-lg">|</span>
             <div class="flex items-center gap-2">
                 <span class="font-sans font-bold text-base tracking-tight text-anthro-dark">FID Protocol</span>
                 <span class="text-[10px] font-mono uppercase bg-anthro-dark/5 border border-anthro-dark/15 text-anthro-muted px-2 py-0.5 rounded-full font-semibold">Zen SEA SSO</span>
@@ -232,11 +232,11 @@
                     </div>
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
-                        <div class="flex justify-between text-slate-700">
+                        <div class="flex justify-between text-anthro-dark/50">
                             <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">ACTIVE USER</span>
                             <span id="userSessionBadge" class="font-bold text-anthro-dark">@anonymous</span>
                         </div>
-                        <div class="flex justify-between text-slate-700">
+                        <div class="flex justify-between text-anthro-dark/50">
                             <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">METHOD</span>
                             <span class="text-anthro-dark font-medium">Zen SEA (Gun/PBKDF2)</span>
                         </div>
@@ -259,7 +259,7 @@
                                 <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Public Key (zenPubKey)</label>
                                 <div class="relative">
                                     <input type="text" id="dashZenPubKey" readonly class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark pr-8 focus:outline-none select-all" value="-">
-                                    <button id="copyZenPubKeyBtn" class="absolute right-2 top-2 text-anthro-muted hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
+                                    <button id="copyZenPubKeyBtn" class="absolute right-2 top-2 text-anthro-dark/40 hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
                                 </div>
                             </div>
 
@@ -272,7 +272,7 @@
                                 </div>
                                 <div class="relative">
                                     <input type="password" id="dashMasterPrivKey" readonly class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark pr-8 focus:outline-none select-all" value="-">
-                                    <button id="copyMasterPrivKeyBtn" class="absolute right-2 top-2 text-anthro-muted hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
+                                    <button id="copyMasterPrivKeyBtn" class="absolute right-2 top-2 text-anthro-dark/40 hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -323,7 +323,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">STATE</span>
-                            <span id="widgetRelayState" class="text-amber-700 font-medium">Connecting...</span>
+                            <span id="widgetRelayState" class="text-amber-900 font-medium">Connecting...</span>
                         </div>
                     </div>
                 </div>
@@ -673,7 +673,7 @@
                         text.textContent = "Fallback Mode";
                     }
                     if (widgetState) {
-                        widgetState.className = "text-amber-800 font-medium";
+                        widgetState.className = "text-amber-900 font-medium";
                         widgetState.textContent = "Local Fallback";
                     }
 
@@ -681,7 +681,7 @@
                 };
 
                 wsRelay.onclose = () => {
-                    if (dot) dot.className = "w-2 h-2 rounded-full bg-slate-400";
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-anthro-muted";
                     if (text) text.textContent = "Disconnected";
                 };
 

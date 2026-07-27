@@ -4,3 +4,7 @@ dist/
 *.log
 
 .vercel
+
+# Pix Agent
+.pi/
+.pi-lens/
