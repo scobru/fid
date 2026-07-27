@@ -103,7 +103,9 @@ FID includes a zero-dependency, single-page Web Application in [`portal.html`](f
 
 It functions as both:
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
-- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs, linking Instance Passports, and calculating deterministic ActivityPub handles and seeds.
+- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs and calculating deterministic ActivityPub handles and seeds.
+
+> Instance Passport linking (Section 2) is implemented server-side (`FidChallengeManager`/`FidPassportIssuer`) but has no working portal UI: issuing a valid Passport requires the target instance's own server secret, which a generic multi-instance portal never holds. A real client for this flow must talk to that specific instance's `/api/auth/zen/challenge` and `/api/auth/zen/link` endpoints directly.
 
 **SSO Flow:** The `sso.html` page implements the zero-knowledge client SSO flow described in [Section 4](#4-login-with-fid-sso-protocol), producing an `FidSsoToken` and `apSeed` verifiable server-side with `FidSsoHandler`.
 
