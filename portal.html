@@ -1150,25 +1150,16 @@
             const username = currentAlias !== "anonymous" ? currentAlias : "user_" + currentKeys.pub.substring(6, 12);
             const apSeed = await computePbkdf2Bits(currentKeys.priv, `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`);
 
-            const passportSig = "sig_hmac_" + (await sha256Hex(`${instanceDomain}:${username}:${currentKeys.pub}`)).substring(0, 32);
-            const tokenSig = "sig_sso_" + (await sha256Hex(`sso:${clientId}:${instanceDomain}:${currentKeys.pub}`)).substring(0, 32);
-
+            // No passport is attached: the portal never holds the target instance's
+            // server secret, so it cannot produce a signature that instance can verify.
+            // validateSsoToken() only checks the passport when one is present.
             const ssoToken = {
                 clientId,
                 instanceDomain,
                 username,
                 zenPubKey: currentKeys.pub,
                 actorUri: `https://${instanceDomain}/users/${username}`,
-                issuedAt: Date.now(),
-                passport: {
-                    instanceDomain,
-                    localUsername: username,
-                    zenPubKey: currentKeys.pub,
-                    issuedAt: Date.now(),
-                    passportSignature: passportSig,
-                    publicDataEndpoint: `https://${instanceDomain}/api/auth/zen/user/${username}/public`
-                },
-                signature: tokenSig
+                issuedAt: Date.now()
             };
 
             const payload = { ssoToken, apSeed };
