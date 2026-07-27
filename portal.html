@@ -561,6 +561,26 @@
             return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        // Real Zen SEA keypair (secp256k1), optionally deterministic from a seed
+        function zenPair(opt) {
+            return new Promise((resolve, reject) => {
+                Zen.pair((p) => {
+                    if (p && p.pub && p.priv) resolve(p);
+                    else reject(new Error("Zen.pair failed to derive a keypair"));
+                }, opt);
+            });
+        }
+
+        // Real Zen SEA signature over `data`, verifiable by anyone holding the matching pub key
+        function zenSign(data, priv) {
+            return new Promise((resolve, reject) => {
+                Zen.sign(data, { priv }, (out) => {
+                    if (typeof out === "string") resolve(out);
+                    else reject(new Error("Zen.sign failed"));
+                });
+            });
+        }
+
         async function computePbkdf2Bits(pass, saltStr) {
             const encoder = new TextEncoder();
             const keyMaterial = await crypto.subtle.importKey(
@@ -585,35 +605,7 @@
 
         async function deriveDeterministicPair(user, pass) {
             const seedStr = user + ':' + pass;
-            if (Zen && typeof Zen.pair === 'function') {
-                try {
-                    const pair = await new Promise((resolve) => {
-                        const timer = setTimeout(() => resolve(null), 1500);
-                        try {
-                            Zen.pair((p) => {
-                                clearTimeout(timer);
-                                if (p && p.pub) resolve(p);
-                                else resolve(null);
-                            }, { seed: seedStr });
-                        } catch {
-                            clearTimeout(timer);
-                            resolve(null);
-                        }
-                    });
-                    if (pair) return pair;
-                } catch (e) {
-                    console.warn("Zen.pair fallback:", e);
-                }
-            }
-
-            const pubSeed = await computePbkdf2Bits(pass, `fid:zen:pub:${user.toLowerCase()}`);
-            const privSeed = await computePbkdf2Bits(pass, `fid:zen:priv:${user.toLowerCase()}`);
-            return {
-                pub: "QmZen" + pubSeed.substring(0, 44),
-                priv: "sec_" + privSeed,
-                epub: "epub_" + pubSeed.substring(0, 32),
-                epriv: "epriv_" + privSeed.substring(0, 32)
-            };
+            return zenPair({ seed: seedStr });
         }
 
         // Session & Linked Instances Persistence
@@ -843,20 +835,22 @@
 
         // Key Pair & Session Handlers
         async function generateRandomKeypair() {
-            const randArr = new Uint8Array(32);
-            crypto.getRandomValues(randArr);
-            const priv = "sec_" + Array.from(randArr).map(b => b.toString(16).padStart(2, '0')).join('');
-            
-            const pubArr = new Uint8Array(22);
-            crypto.getRandomValues(pubArr);
-            const pub = "QmZen" + Array.from(pubArr).map(b => b.toString(16).padStart(2, '0')).join('');
+            let pair;
+            try {
+                pair = await zenPair();
+            } catch (err) {
+                console.error("[FID] Random keypair generation failed:", err);
+                alert("Failed to generate a Zen SEA keypair. Please try again.");
+                return;
+            }
 
             currentAlias = "anonymous";
-            currentKeys = { pub, priv };
+            currentKeys = pair;
 
             localStorage.setItem("fid_user_alias", currentAlias);
-            localStorage.setItem("fid_master_priv_key", priv);
-            localStorage.setItem("fid_zen_pub_key", pub);
+            localStorage.setItem("fid_master_priv_key", pair.priv);
+            localStorage.setItem("fid_zen_pub_key", pair.pub);
+            localStorage.setItem("fid_zen_pair", JSON.stringify(pair));
 
             updateDashboardUI();
             showToast("Random keys generated");
@@ -872,7 +866,14 @@
                 return;
             }
 
-            const pair = await deriveDeterministicPair(user, pass);
+            let pair;
+            try {
+                pair = await deriveDeterministicPair(user, pass);
+            } catch (err) {
+                console.error("[FID] Keypair derivation failed:", err);
+                alert("Failed to derive your Zen SEA keypair. Please try again.");
+                return;
+            }
 
             currentAlias = user.toLowerCase();
             currentKeys = pair;
@@ -1093,25 +1094,21 @@
             const domain = document.getElementById("apDomainInput")?.value.trim() || "sudorecords.scobrudot.dev";
             const username = document.getElementById("apUserInput")?.value.trim() || (currentAlias !== "anonymous" ? currentAlias : "alice");
 
-            const passportSig = "sig_hmac_" + (await sha256Hex(`${domain}:${username}:${currentKeys.pub}:${Date.now()}`)).substring(0, 32);
-            const tokenSig = "sig_sso_" + (await sha256Hex(`sso:${domain}:${currentKeys.pub}`)).substring(0, 32);
+            const clientId = "tunecamp-instance";
+            const issuedAt = Date.now();
+            const nonce = crypto.randomUUID().replace(/-/g, "");
+            const tokenPayload = `${clientId}:${domain}:${username}:${currentKeys.pub}:${issuedAt}:${nonce}`;
+            const signature = await zenSign(tokenPayload, currentKeys.priv);
 
             const ssoToken = {
-                clientId: "tunecamp-instance",
+                clientId,
                 instanceDomain: domain,
                 username: username,
                 zenPubKey: currentKeys.pub,
                 actorUri: `https://${domain}/users/${username}`,
-                issuedAt: Date.now(),
-                passport: {
-                    instanceDomain: domain,
-                    localUsername: username,
-                    zenPubKey: currentKeys.pub,
-                    issuedAt: Date.now(),
-                    passportSignature: passportSig,
-                    publicDataEndpoint: `https://${domain}/api/auth/zen/user/${username}/public`
-                },
-                signature: tokenSig
+                issuedAt,
+                nonce,
+                signature
             };
 
             const prev = document.getElementById("ssoTokenJsonPreview");
@@ -1150,16 +1147,24 @@
             const username = currentAlias !== "anonymous" ? currentAlias : "user_" + currentKeys.pub.substring(6, 12);
             const apSeed = await computePbkdf2Bits(currentKeys.priv, `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`);
 
-            // No passport is attached: the portal never holds the target instance's
-            // server secret, so it cannot produce a signature that instance can verify.
-            // validateSsoToken() only checks the passport when one is present.
+            // No passport is attached (the portal never holds the target instance's
+            // server secret and can't produce one). The token itself is real-signed
+            // below with the Zen SEA master key, so the target instance can verify
+            // it directly against zenPubKey without needing a passport.
+            const issuedAt = Date.now();
+            const nonce = crypto.randomUUID().replace(/-/g, "");
+            const tokenPayload = `${clientId}:${instanceDomain}:${username}:${currentKeys.pub}:${issuedAt}:${nonce}`;
+            const signature = await zenSign(tokenPayload, currentKeys.priv);
+
             const ssoToken = {
                 clientId,
                 instanceDomain,
                 username,
                 zenPubKey: currentKeys.pub,
                 actorUri: `https://${instanceDomain}/users/${username}`,
-                issuedAt: Date.now()
+                issuedAt,
+                nonce,
+                signature
             };
 
             const payload = { ssoToken, apSeed };
