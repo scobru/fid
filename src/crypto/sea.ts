@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import zenSign from "@akaoio/zen/src/sign.js";
 import zenVerify from "@akaoio/zen/src/verify.js";
+import zenPair from "@akaoio/zen/src/pair.js";
+import type { FidKeyPair } from "../types.js";
 
 /**
  * Zen SEA Cryptographic Helper Interface
@@ -9,6 +11,11 @@ import zenVerify from "@akaoio/zen/src/verify.js";
 
 export function generateNonce(lengthBytes: number = 16): string {
   return crypto.randomBytes(lengthBytes).toString("hex");
+}
+
+/** Generates a fresh Zen SEA keypair (secp256k1). */
+export async function generateKeyPair(): Promise<FidKeyPair> {
+  return zenPair();
 }
 
 /** Signs a payload with a Zen SEA private key. Used by clients holding the master key. */
