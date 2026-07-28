@@ -1,6 +1,6 @@
 {
   "name": "fid",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "FID (Fediverse-ID) - Zero-Knowledge P2P & Fediverse Decentralized Authentication Library powered by Zen SEA",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "test": "node --test dist/tests/*.test.js"
+    "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "keywords": [
     "fediverse",

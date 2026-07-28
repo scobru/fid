@@ -2,9 +2,9 @@
 
 **FID (Fediverse-ID)** is a generic, self-sovereign, zero-knowledge cryptographic identity and Single-Sign-On (SSO) protocol designed for **any ActivityPub/Fediverse application**, **P2P web apps**, and **decentralized platforms**.
 
-It allows users to own a master cryptographic keypair from **two first-class sources** — **Zen SEA** (P2P, offline-first, Gun.js graph) or **WebAuthn/Passkeys** (hardware-backed, biometric, standard browser UX). Each source deterministically derives per-domain ActivityPub keypairs via PBKDF2. The two sources are separate identities: a passkey derives from its PRF secret, a Zen keypair from its private key, so the same username on the same domain yields a different actor key per source. Pick one source per identity and stay on it.
+It allows users to own a master cryptographic keypair derived from **an alias and a passphrase** (**Zen SEA**, secp256k1), which then deterministically derives per-domain ActivityPub keypairs via PBKDF2. There is no account to recover and no key file to back up: the same alias and passphrase reproduce the same identity on any device, in any browser, through any portal.
 
-> **Passkey requirement:** the passkey path needs the WebAuthn **PRF extension** (`hmac-secret`). Authenticators without it cannot derive a stable secret and are refused rather than silently downgraded — the previous public-key-based derivation was insecure (public data is not a secret) and has been removed.
+> **v4 removed the WebAuthn/passkey source.** A passkey is bound to a Relying Party ID (eTLD+1), so the same human authenticating through two portals — say `fid-portal.vercel.app` and `tunecamp.org` — got two different credentials, two different master keys, and therefore two different identities. That is the opposite of a portable Fediverse identity, and it made one portal a hard dependency. See [Migration from v3](#-migration-from-v3).
 
 > ℹ️ **Reference Implementation Example:** [TuneCamp](https://github.com/scobru/tunecamp) is an example of an application implementing the FID protocol for federated music streaming and user authentication.
 
@@ -44,20 +44,17 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
 
 ## 🔑 Core Concepts & Cryptographic Architecture
 
-### 1. Master Key Sources
-FID supports two first-class master key sources. Both produce the **same** deterministic ActivityPub identity for a given `(instanceDomain, username)` pair.
+### 1. The Master Key Source
+There is exactly one master key source: **Zen SEA**, a secp256k1 keypair derived deterministically from `alias:passphrase`.
 
-#### Zen SEA (P2P, Offline-First)
-Every user owns a master **Zen SEA keypair**:
-- **`zenPubKey`** (Public Key): Used as the user's global immutable identifier across the P2P network.
-- **`masterPrivKey`** (Private Key): Stored locally in the user's browser or wallet. Never transmitted over the wire or stored on any server.
+- **`zenPubKey`** (Public Key): the user's global immutable identifier. It travels in every SSO token and is public by design.
+- **`masterPrivKey`** (Private Key): re-derived in the browser from the passphrase. Never transmitted over the wire, never stored on any server.
 
 Authentication is **Zero-Knowledge**: instances verify cryptographically signed challenges rather than receiving or storing passwords.
 
-#### WebAuthn / Passkeys (Hardware-Backed, Biometric)
-Users can alternatively create a passkey via `navigator.credentials.create()`. The passkey is stored in the platform authenticator (iCloud Keychain, Google Password Manager, 1Password, YubiKey, etc.) and syncs across the user's devices. The public key is persisted in IndexedDB on the portal for session continuity.
+Because the keypair is a pure function of `alias:passphrase`, portability is structural rather than a sync feature — nothing has to be copied between devices, and no portal holds anything the user needs.
 
-Both sources are unified through `MasterKeySource` — a discriminated union type (`{ source: 'zen', ... } | { source: 'webauthn', ... }`) that feeds into the same derivation pipeline.
+> **Consequence: the passphrase is the whole identity.** `zenPubKey` is public, so a weak passphrase is offline-brute-forceable by anyone who has seen one SSO token. Implementations MUST enforce a strong passphrase at identity creation (see [Conformance requirements](#-conformance-requirements)).
 
 ### 2. Two-Step Instance Passport Handshake
 To link a local instance profile (e.g. `@scobru` on a target instance) to a global Zen identity (`zenPubKey`):
@@ -84,11 +81,12 @@ Instance (Server)                     User / Portal (Client)
 FID enables users to maintain consistent ActivityPub personas across multiple instances without storing separate RSA/Ed25519 key files per server.
 
 Using `deriveApIdentity()` (primary) or the legacy alias `deriveApKeypair()`:
-- **Input**: `MasterKeySource` + Target Domain + Username. The master secret is the Zen SEA **private** key (`privKey`, used as UTF-8 password material) or, for passkeys, the **WebAuthn PRF output** (`prfSecret`). Never a public key: a public key is public, so deriving from it would let anyone who knows a credential ID reconstruct the user's ActivityPub private key.
-- **Derivation**: Uses `PBKDF2-SHA256` over salt `fid:activitypub:<domain>:<username>` (both lowercased) to generate a 32-byte seed. The salt is identical for both source types, so the *same* master secret always yields the same AP keypair for a given `(domain, username)` — but a Zen source and a passkey source are two different identities, because their master secrets differ.
+- **Input**: `MasterKeySource` + Target Domain + Username. The master secret is the Zen SEA **private** key (`privKey`, used as UTF-8 password material). Never the public key: it is public, so deriving from it would let anyone who has seen a token reconstruct the user's ActivityPub private key.
+- **Derivation**: Uses `PBKDF2-SHA256` over salt `fid:activitypub:<domain>:<username>` (both lowercased) to generate a 32-byte seed.
+- **Domain scoping is deliberate**: the domain is in the salt, so each instance gets a *different* AP keypair. A compromised instance holds a key that only works there and cannot impersonate the user anywhere else. The portable part of the identity is `zenPubKey`, not the AP key.
 - **Key Generation**: Wraps the seed in an **Ed25519 PKCS#8 DER** envelope to instantiate a deterministic Ed25519 keypair.
 - **Output** (`DerivedApIdentity`):
-  - `masterKeySource`: which source was used (`'zen'` | `'webauthn'`)
+  - `masterKeySource`: the source used (always `'zen'`)
   - `webfingerHandle`: `@alice@domain.org`
   - `actorUri`: `https://domain.org/users/alice`
   - `publicKeyPem`: W3C/ActivityPub compatible Ed25519 Public Key
@@ -98,15 +96,17 @@ Using `deriveApIdentity()` (primary) or the legacy alias `deriveApKeypair()`:
 FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P apps.
 
 **Current Implementation:**
-1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations) from the master secret (Zen `privKey`, or the passkey's PRF output obtained with `navigator.credentials.get({ extensions: { prf: { eval: { first: <salt> } } } })`).
-2. Browser calls `issueSsoToken(ssoReq, username, masterKeySource)`, which signs `${clientId}:${instanceDomain}:${username}:${sourceId}:${issuedAt}:${nonce}` (`sourceId` = Zen pub key or passkey credential ID) with the master private key from the chosen source, and embeds only the **public** half of the source in the token (`toPublicMasterKeySource`). A WebAuthn token additionally carries `webauthnAssertion { authenticatorData, clientDataJSON }`, whose challenge must be `SHA-256(tokenPayload)`.
+1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations) from the master secret (Zen `privKey`).
+2. Browser calls `issueSsoToken(ssoReq, username, masterKeySource)`, which signs `${clientId}:${instanceDomain}:${username}:${zenPubKey}:${issuedAt}:${nonce}` with the master private key, and embeds only the **public** half of the source in the token (`toPublicMasterKeySource`).
 3. Browser checks the redirect target with `resolveRedirectUri(redirectUri, instanceDomain)` — HTTPS (or loopback HTTP) and same host as `instanceDomain`, otherwise the flow is refused — then delivers the payload by **code exchange**: it POSTs `{ ssoToken, apSeed, mode: "code" }` to the instance and sends the user back carrying only a one-time code.
    ```text
    POST https://<instanceDomain>/api/auth/zen/sso   ->  { code }
    redirectUri?fid_code=<code>                          (app trades it for its session)
    ```
    The portal gets no session for the instance, and no key material ever enters the URL. If the instance answers without a `code` (too old for this flow), the portal **refuses** rather than falling back — a fallback would put the ActivityPub key back in the address bar. The legacy implicit form is `redirectUri#payload=encodeURIComponent(JSON.stringify({ ssoToken, apSeed }))`; it is deprecated because the fragment survives in the back button and in session restore.
-4. Target instance backend (Node.js) uses `await FidSsoHandler.validateSsoToken(ssoToken, publicDataFetcher?, trustedWebauthnKey?)` to verify required fields, token age (max 15 min), single use (see below), and the signature: Zen tokens against `ssoToken.zenPubKey`; WebAuthn tokens against `trustedWebauthnKey`, the PEM the instance pinned for that credential ID on first login (**a token whose only reference key is the one it carries itself is rejected** — anyone can generate a keypair). It then validates `apSeed` length (32 bytes), wraps it into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and registers/logs in the user.
+4. Target instance backend (Node.js) uses `await FidSsoHandler.validateSsoToken(ssoToken, maxAgeMs?)` to verify required fields, token age (max 15 min), single use (see below), and the signature against `masterKeySource.pubKey` (falling back to the flat `zenPubKey` field). It then validates `apSeed` length (32 bytes), wraps it into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and registers/logs in the user.
+
+   The token carries its own verification key, which is safe here and was **not** safe for WebAuthn: a Zen public key *is* the identity, so a self-signed token from a different keypair is simply a different user, not an impersonation. Instances key their accounts on `zen_pub`, never on the username alone.
 5. **Single use**: each token's nonce is burned on successful validation by a `FidReplayStore` (default: in-process `FidReplayGuard`, 15 min retention). A failed validation does not burn it. Multi-process deployments must supply a shared store, otherwise a token is replayable once per worker.
 
 **What the instance learns:** the SSO payload deliberately includes `apSeed`, the ActivityPub private key *for that domain only* — the instance needs it to sign federated activities on the user's behalf. The **master** secret never leaves the browser, and `apSeed` is domain-scoped, so a hostile instance cannot recover the master key or impersonate the user elsewhere. Any UI copy claiming "no private key ever leaves your browser" is wrong; say "your master key never leaves, the instance gets a key scoped to itself".
@@ -119,13 +119,11 @@ FID includes a zero-dependency, single-page Web Application in [`portal.html`](f
 
 It functions as both:
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
-- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs, creating WebAuthn passkeys, and calculating deterministic ActivityPub handles and seeds.
+- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs and calculating deterministic ActivityPub handles and seeds.
 
-The portal uses a tabbed interface in the Identity Creation card:
-- **Zen SEA tab**: username + passphrase form for deterministic Zen SEA keypair generation.
-- **Passkey / WebAuthn tab**: username input + "Create Passkey" button that triggers `navigator.credentials.create()` with `extensions: { prf: {} }`. The passkey credential ID and public key PEM are saved to IndexedDB for session persistence; the PRF secret is never stored, it is re-evaluated at each login.
+The Identity card is a single alias + passphrase form: `zenPair({ seed: alias + ':' + passphrase })` reproduces the keypair, so the same two strings unlock the same identity on any portal deployment.
 
-> The Passkey pane also checks WebAuthn availability (`PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`) and disables the button if no authenticator is present.
+> **The portal is replaceable, not authoritative.** It holds no user record. Anyone can host `portal.html`, and a user typing the same alias and passphrase into it gets the same identity — which is exactly why the WebAuthn path had to go: an RP-bound credential would have made *this* deployment the identity.
 
 > Instance Passport linking (Section 2) is implemented server-side (`FidChallengeManager`/`FidPassportIssuer`) but has no working portal UI: issuing a valid Passport requires the target instance's own server secret, which a generic multi-instance portal never holds. A real client for this flow must talk to that specific instance's `/api/auth/zen/challenge` and `/api/auth/zen/link` endpoints directly.
 
@@ -189,7 +187,7 @@ console.log(apIdentity.privateKeyPem);      // -----BEGIN PRIVATE KEY-----...
 console.log(apIdentity.masterKeySource);    // "zen"
 ```
 
-The same `(source, domain, username)` triple always produces the **identical** AP keypair. Changing the source changes the keypair: the master secret differs, so a Zen identity and a passkey identity are two distinct actors.
+The same `(source, domain, username)` triple always produces the **identical** AP keypair. Changing the domain changes the keypair, by design.
 
 ### 3. "Login with FID" SSO Flow
 
@@ -213,15 +211,13 @@ if (!target) throw new Error("refusing to redirect: not HTTPS on instanceDomain"
 // 2. Issue SSO Token upon user authorization (with the chosen master key source)
 const zenSource = createZenMasterKeySource(masterPrivKey, zenPubKey);
 const ssoToken = await ssoHandler.issueSsoToken(ssoReq, "alice", zenSource);
-// Or with a WebAuthn passkey source (browser only — prfSecret comes from the PRF extension):
-// const webauthnSource = createWebAuthnMasterKeySource(credentialId, publicKey, publicKeyPem, prfSecret);
-// const ssoToken = await ssoHandler.issueSsoToken(ssoReq, "alice", webauthnSource);
 
-// 3. Validate SSO Token (On external app backend). For a WebAuthn token, pass the public key
-// this instance pinned for that credentialId — without it validation fails closed.
-const trustedPem = await db.getWebauthnKey(ssoToken.masterKeySource?.credentialId);
-const result = await ssoHandler.validateSsoToken(ssoToken, undefined, trustedPem);
+// 3. Validate SSO Token (On external app backend)
+const result = await ssoHandler.validateSsoToken(ssoToken);
 console.log(result.valid, result.error);   // tokens are single-use: a second call returns false
+
+// 4. Look the user up by ssoToken.zenPubKey — never by username alone, or a colliding
+//    local handle could be hijacked through SSO.
 ```
 
 ---
@@ -246,20 +242,10 @@ export interface FidPassport {
 }
 
 // Held only by the client. Carries secrets — never serialise it into a token.
-export type MasterKeySource =
-  | { type: 'zen'; privKey: string; pubKey: string }
-  | {
-      type: 'webauthn';
-      credentialId: string;
-      publicKey: CryptoKey;
-      publicKeyPem: string;
-      prfSecret?: Uint8Array;   // WebAuthn PRF output; required to derive, never transmitted
-    };
+export type MasterKeySource = { type: 'zen'; privKey: string; pubKey: string };
 
 // The wire-safe projection put on tokens. Build it with toPublicMasterKeySource().
-export type PublicMasterKeySource =
-  | { type: 'zen'; pubKey: string }
-  | { type: 'webauthn'; credentialId: string; publicKeyPem: string };
+export type PublicMasterKeySource = { type: 'zen'; pubKey: string };
 
 export interface DerivedApIdentity {
   instanceDomain: string;
@@ -283,12 +269,48 @@ export interface FidSsoToken {
   signature?: string;
   nonce?: string;
   masterKeySource?: PublicMasterKeySource;
-  // Required to verify `signature` when masterKeySource.type === 'webauthn' (base64url).
-  webauthnAssertion?: { authenticatorData: string; clientDataJSON: string };
 }
 ```
 
 `clientId`, `instanceDomain`, `signature`, and `nonce` are required for `validateSsoToken`/`verifySsoToken` to succeed — they're typed as optional only to allow constructing partial tokens before signing.
+
+---
+
+## ✅ Conformance Requirements
+
+FID's security rests on the passphrase, so an implementation that gets these wrong is not a FID implementation.
+
+1. **Only the identity portal may ever see the passphrase.** A relying app MUST redirect the user to the portal origin and MUST NOT host its own alias/passphrase form, even by embedding the portal's HTML. The passphrase is the master key; typing it into an app origin hands that app every identity the user has on every instance, forever. This is the same rule as "never type your password into a page that isn't your bank".
+
+2. **Enforce a strong passphrase at identity creation.** `zenPubKey` is published in every SSO token, so anyone who has seen one token can mount an offline guessing attack against the passphrase. There is no server to rate-limit and no lockout — the only defence is entropy. Reject short or common passphrases at creation time; a passphrase is not upgradeable later without changing identity.
+
+3. **Verify the redirect target.** Gate every redirect through `resolveRedirectUri(redirectUri, instanceDomain)` (`src/sso/redirect.ts`). It is dependency-free so a plain browser page can import the same tested code the server uses.
+
+4. **Key accounts on `zen_pub`, not on the username.** Usernames collide across instances; the Zen public key is the identity.
+
+**What FID does not give you:** phishing resistance. WebAuthn had it and Zen does not — a convincing fake portal can harvest a passphrase. Rule 1 is the mitigation, and it is a procedural one. This was the accepted cost of an identity that is not bound to a single Relying Party domain.
+
+---
+
+## 🔄 Migration from v3
+
+v4 is a breaking release: the WebAuthn/passkey master key source is gone.
+
+| v3 | v4 |
+|---|---|
+| `MasterKeySource` = `zen \| webauthn` union | `{ type: 'zen'; privKey; pubKey }` only |
+| `PublicMasterKeySource` = `zen \| webauthn` union | `{ type: 'zen'; pubKey }` only |
+| `validateSsoToken(token, publicDataFetcher?, trustedWebauthnKey?)` | `validateSsoToken(token, maxAgeMs?)` |
+| `verifySsoToken(token, ..., trustedWebauthnKey?)` | third parameter removed |
+| `createWebAuthnMasterKeySource()`, `isWebAuthnSource()` | removed |
+| `crypto/webauthn.js` export | removed |
+| `FidSsoToken.webauthnAssertion` | removed |
+
+**Zen identities are unaffected.** The PBKDF2 derivation is byte-identical — the pinned cross-implementation test vector `8209eee091a83eaedc9f687784f1393ea34d07b6bf578fcbccbcb5e2a5eea423` is unchanged, so no existing Zen user's ActivityPub key is re-keyed by upgrading.
+
+**Passkey identities cannot be migrated.** A passkey master secret is the PRF output of an authenticator; it is not extractable and cannot be converted into a Zen keypair. Accounts whose `zen_pub` is `webauthn:<credentialId>` can no longer log in and must be re-created — deciding what to do with them (unlink, re-invite, delete) is the relying app's call.
+
+Relying apps that pinned passkey public keys (e.g. a `fid_webauthn_credentials` table) can stop writing to that store. Dropping it is safe but not required; leaving it orphaned breaks nothing.
 
 ---
 

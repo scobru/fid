@@ -65,45 +65,28 @@ export interface FidSignedPayload<T = unknown> {
 
 /**
  * @llm-summary Source of the master key used for deterministic ActivityPub identity derivation.
- * @llm-context Two supported sources: Zen SEA (secp256k1, P2P/offline-first) and WebAuthn/Passkeys (hardware-backed, biometric).
- * Each derives a deterministic Ed25519 ActivityPub keypair for a given (instanceDomain, username) via PBKDF2
- * over its own master secret, so the two sources are distinct identities — not interchangeable halves of one.
- * @llm-edge-cases For WebAuthn, the credential must be registered on a stable Relying Party (e.g., fid-portal.vercel.app)
- * to enable cross-instance portability. `publicKeyPem` verifies assertion signatures; it is NOT key material —
- * deriving an identity requires `prfSecret`, obtained from the authenticator's PRF extension.
- * @llm-faq Q: Why two sources? A: Zen SEA enables P2P/graph identity; WebAuthn enables mainstream UX (FaceID, YubiKey).
- * Q: Do they produce the same AP keys? A: No — each source has its own master secret; a given user gets one
- * identity per (source, instanceDomain, username). Q: Why does the WebAuthn variant need prfSecret? A: The public
- * key is published inside every SSO token, so anyone could re-derive the identity from it; the PRF output is a
- * per-credential secret that never leaves the authenticator without user verification.
+ * @llm-context One source: Zen SEA (secp256k1), derived deterministically from the user's alias and
+ * passphrase in the browser. A deterministic Ed25519 ActivityPub keypair is derived from it for a given
+ * (instanceDomain, username) via PBKDF2, so the same alias+passphrase reproduces the same identity on any
+ * device and through any portal.
+ * @llm-edge-cases `privKey` is the master secret: it must never leave the origin the user typed their
+ * passphrase into, and must never be serialised into an SSO token. Use toPublicMasterKeySource() first.
+ * @llm-faq Q: Why not WebAuthn/passkeys? A: A passkey is bound to a Relying Party ID, which would make the
+ * identity depend on one central domain and fork users across origins. Zen SEA keeps the identity portable
+ * and the portal replaceable. Q: Is this a discriminated union with one member on purpose? A: Yes — it keeps
+ * the wire format and call sites stable if a second source is ever added.
  */
-export type MasterKeySource =
-  | { type: 'zen'; privKey: string; pubKey: string }
-  | {
-      type: 'webauthn';
-      credentialId: string;
-      publicKey: CryptoKey;
-      publicKeyPem: string;
-      /**
-       * Output of the WebAuthn PRF extension (`prf.results.first`) for this credential.
-       * Browser-only: obtained during navigator.credentials.get(). Required to derive an
-       * ActivityPub identity, absent on the server, and never transmitted.
-       */
-      prfSecret?: Uint8Array;
-    };
+export type MasterKeySource = { type: 'zen'; privKey: string; pubKey: string };
 
 /**
  * @llm-summary The wire-safe projection of a MasterKeySource: everything needed to verify, nothing secret.
  * @llm-context Used as the `masterKeySource` field of FidSsoToken. MasterKeySource itself carries the Zen
- * `privKey` and a non-serialisable CryptoKey, so embedding it in a token would ship the user's master
- * private key to the relying app. Build one with toPublicMasterKeySource().
- * @llm-edge-cases Verification only ever needs pubKey (Zen) or credentialId + publicKeyPem (WebAuthn);
- * the WebAuthn publicKeyPem on a token is a client-supplied claim and must still be checked against the
- * key registered for that credentialId.
+ * `privKey`, so embedding it in a token would ship the user's master private key to the relying app.
+ * Build one with toPublicMasterKeySource().
+ * @llm-edge-cases Verification only ever needs pubKey; it is the user's stable public identity and is safe
+ * to publish.
  */
-export type PublicMasterKeySource =
-  | { type: 'zen'; pubKey: string }
-  | { type: 'webauthn'; credentialId: string; publicKeyPem: string };
+export type PublicMasterKeySource = { type: 'zen'; pubKey: string };
 
 /**
  * @llm-summary The result of deterministically deriving an ActivityPub identity from a master FID key and a target instance.
@@ -153,13 +136,5 @@ export interface FidSsoToken {
   signature?: string;
   nonce?: string;
   masterKeySource?: PublicMasterKeySource;
-  /**
-   * Raw WebAuthn assertion fields (base64url), required to verify `signature`
-   * when masterKeySource.type === 'webauthn'. Absent for Zen SEA tokens.
-   */
-  webauthnAssertion?: {
-    authenticatorData: string;
-    clientDataJSON: string;
-  };
 }
 

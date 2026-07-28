@@ -1,5 +1,28 @@
 # Changelog
 
+## [4.0.0] - 2026-07-28
+
+### ⚠️ Breaking
+
+- **The WebAuthn/passkey master key source is removed.** A passkey is scoped to a Relying Party ID (eTLD+1), so the same human authenticating through `fid-portal.vercel.app` and through an app's own domain received two different credentials, two different master secrets and therefore two different FID identities — for a protocol whose entire premise is one portable identity across the Fediverse. It also made whichever portal issued the credential a permanent dependency: lose access to that origin and the identity is gone. Zen SEA has no such binding, because the keypair is a pure function of `alias:passphrase`. Removed: `createWebAuthnMasterKeySource()`, `isWebAuthnSource()`, the `crypto/webauthn.js` export (CBOR decoding, COSE key extraction, raw→DER ECDSA conversion), and `FidSsoToken.webauthnAssertion`.
+- **`MasterKeySource` and `PublicMasterKeySource` are no longer unions**, they are `{ type: 'zen'; privKey; pubKey }` and `{ type: 'zen'; pubKey }`. Code that switched on `source.type` still compiles; code that constructed the `webauthn` variant does not.
+- **`validateSsoToken` and `verifySsoToken` lost their `trustedWebauthnKey` parameter.** The signature is now `validateSsoToken(token, maxAgeMs?)`. The trust-on-first-use pinning it enforced existed only because a WebAuthn token's self-declared `publicKeyPem` was not a trust anchor; a Zen public key *is* the identity, so a token signed by a different keypair is a different user rather than an impersonation. Relying apps can stop maintaining their pinned-credential store.
+
+### Security
+
+- **What was gained:** the identity no longer depends on any single origin, and there is no per-portal credential store to compromise or lose.
+- **What was given up:** phishing resistance. A convincing fake portal can harvest a passphrase, which WebAuthn made structurally impossible. The mitigation is procedural and is now a stated conformance rule: **relying apps MUST redirect to the portal origin and MUST NOT host their own alias/passphrase form.** See "Conformance Requirements" in the README.
+- **A weak passphrase is now the whole attack surface.** `zenPubKey` is published in every SSO token, so it is offline-guessable with no server to rate-limit. Implementations must enforce a strong passphrase at identity creation; it cannot be upgraded later without changing identity.
+
+### Migration
+
+- **Zen identities are not re-keyed.** The PBKDF2 derivation is byte-identical and the pinned cross-implementation vector `8209eee091a83eaedc9f687784f1393ea34d07b6bf578fcbccbcb5e2a5eea423` still passes.
+- **Passkey identities cannot be migrated.** A PRF secret is not extractable from an authenticator and cannot become a Zen keypair. Accounts whose `zen_pub` is `webauthn:<credentialId>` can no longer authenticate and must be re-created.
+
+### Fixed
+
+- `npm test` ran `node --test dist/tests/*.test.js` without building first, so it happily passed against a stale `dist/` — including tests for source files that had already been deleted. It now builds first.
+
 ## [3.2.1] - 2026-07-28
 
 ### Fixed

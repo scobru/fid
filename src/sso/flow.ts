@@ -4,7 +4,6 @@ import { FidPassportIssuer } from "../server/passport.js";
 import { toPublicMasterKeySource } from "../crypto/master-key.js";
 import { FidReplayGuard, type FidReplayStore } from "../server/replay.js";
 import { signPayload, verifySignature } from "../crypto/sea.js";
-import { verifyAssertionSignature, base64UrlToBytes } from "../crypto/webauthn.js";
 import type { FidSsoRequest, FidSsoToken, MasterKeySource } from "../types.js";
 
 /**
@@ -52,10 +51,10 @@ export class FidSsoHandler {
   }
 
 /**
- * @llm-summary Issues a signed SSO token after the user has authenticated with their FID (Zen SEA or WebAuthn).
+ * @llm-summary Issues a signed SSO token after the user has authenticated with their Zen SEA FID.
  * @llm-context Called by the Fediverse app after the user approves the login request. Derives the ActivityPub identity from the master key source, issues a passport, signs the token payload, and returns a complete FidSsoToken.
- * @llm-edge-cases For Zen SEA: uses secp256k1 private key for signing. For WebAuthn: the signature is created by the authenticator during credential assertion (not by this function). The token payload includes masterKeySource for traceability.
- * @llm-faq Q: What is in the token payload? A: clientId, instanceDomain, username, zenPubKey (or empty for WebAuthn), issuedAt, and nonce — colon-separated. Q: Is the passport included? Yes, always issued by the same FidPassportIssuer. Q: Can the token be forged without the master private key? No.
+ * @llm-edge-cases Uses the secp256k1 private key for signing, so it must only run where the user's master key legitimately lives (the portal origin) — never on a relying app's server.
+ * @llm-faq Q: What is in the token payload? A: clientId, instanceDomain, username, zenPubKey, issuedAt, and nonce — colon-separated. Q: Is the passport included? Yes, always issued by the same FidPassportIssuer. Q: Can the token be forged without the master private key? No.
  */
   public async issueSsoToken(
     ssoReq: FidSsoRequest,
@@ -64,36 +63,17 @@ export class FidSsoHandler {
   ): Promise<FidSsoToken> {
     const issuedAt = Date.now();
     const apIdentity = deriveApIdentity(masterKeySource, ssoReq.instanceDomain, username);
-    
-    // For passport, use zenPubKey if Zen source, otherwise derive a stable identifier from WebAuthn public key
-    const passportIdentifier = masterKeySource.type === 'zen' 
-      ? masterKeySource.pubKey 
-      : masterKeySource.publicKeyPem;
-    
-    const passport = this.passportIssuer.issuePassport(ssoReq.instanceDomain, username, passportIdentifier);
 
-    // Token payload for signing: includes source type for verification context
-    const sourceId = masterKeySource.type === 'zen' ? masterKeySource.pubKey : masterKeySource.credentialId;
-    const tokenPayload = `${ssoReq.clientId}:${ssoReq.instanceDomain}:${username}:${sourceId}:${issuedAt}:${ssoReq.nonce}`;
-    
-    // Sign with appropriate key: Zen SEA private key, or WebAuthn (handled client-side during assertion)
-    if (masterKeySource.type === 'webauthn') {
-      // The authenticator (not this server-side method) produces the WebAuthn
-      // signature during navigator.credentials.get(). Callers must perform the
-      // assertion ceremony client-side and build the FidSsoToken directly with
-      // the resulting signature + webauthnAssertion fields.
-      throw new Error(
-        "issueSsoToken cannot sign WebAuthn tokens server-side; perform the assertion " +
-        "client-side and construct the FidSsoToken with the real assertion signature."
-      );
-    }
+    const passport = this.passportIssuer.issuePassport(ssoReq.instanceDomain, username, masterKeySource.pubKey);
+
+    const tokenPayload = `${ssoReq.clientId}:${ssoReq.instanceDomain}:${username}:${masterKeySource.pubKey}:${issuedAt}:${ssoReq.nonce}`;
     const signature = await signPayload(tokenPayload, masterKeySource.privKey);
 
     return {
       clientId: ssoReq.clientId,
       instanceDomain: ssoReq.instanceDomain,
       username,
-      zenPubKey: masterKeySource.type === 'zen' ? masterKeySource.pubKey : '',
+      zenPubKey: masterKeySource.pubKey,
       actorUri: apIdentity.actorUri,
       issuedAt,
       nonce: ssoReq.nonce,
@@ -108,45 +88,20 @@ export class FidSsoHandler {
 /**
  * @llm-summary Validates an SSO token and returns a detailed result object with success/failure reason.
  * @llm-context Called by Fediverse apps to authenticate incoming SSO tokens. Checks token completeness, expiry, signature validity, and optionally passport validity. Returns { valid: boolean, error?: string } — never throws.
- * @llm-edge-cases Returns { valid: false, error: "Missing token payload" } if token is falsy. Returns { valid: false, error: "Missing required ssoToken fields..." } if any required field is missing. Returns { valid: false, error: "SSO token expired" } if the token is older than maxAgeMs. Returns { valid: false, error: "Invalid SSO token signature" } if the signature does not match. If passport is present, it is also verified — failure returns "Invalid passport signature". For WebAuthn tokens, `trustedWebauthnKey` is MANDATORY: it must be the public key the caller stored at credential registration, looked up by `credentialId`. A WebAuthn token validated without it is rejected outright, because the token's own publicKeyPem is attacker-controlled and would let anyone self-sign a valid token.
- * @llm-faq Q: What fields are required? A: username, issuedAt, zenPubKey, signature, clientId, instanceDomain, nonce. Q: Is the passport check optional? A: Yes — if passport is undefined, it is skipped. Q: Can this be called with a stale token? A: Yes, it will return valid: false with error "SSO token expired". Q: Why is trustedWebauthnKey mandatory? A: The token's own publicKeyPem is client-supplied and unauthenticated; without a server-side lookup by credentialId there is nothing to verify against, so validation must fail closed rather than trust the token. Q: Can I validate the same token twice? A: No — validation is single-use: the nonce is claimed from the replay store on success, and a second call returns "SSO token already used (replay)". Validate once and cache the result for the rest of the request.
+ * @llm-edge-cases Returns { valid: false, error: "Missing token payload" } if token is falsy. Returns { valid: false, error: "Missing required ssoToken fields..." } if any required field is missing. Returns { valid: false, error: "SSO token expired" } if the token is older than maxAgeMs. Returns { valid: false, error: "Invalid SSO token signature" } if the signature does not match. If passport is present, it is also verified — failure returns "Invalid passport signature".
+ * @llm-faq Q: What fields are required? A: username, issuedAt, zenPubKey, signature, clientId, instanceDomain, nonce. Q: Is the passport check optional? A: Yes — if passport is undefined, it is skipped. Q: Can this be called with a stale token? A: Yes, it will return valid: false with error "SSO token expired". Q: Is the token's own pubKey a trust anchor? A: It is the identity being claimed, and the signature proves possession of the matching private key — but the caller must still check that this pubKey is the one bound to the local account, by looking the user up by zen_pub. Q: Can I validate the same token twice? A: No — validation is single-use: the nonce is claimed from the replay store on success, and a second call returns "SSO token already used (replay)". Validate once and cache the result for the rest of the request.
  */
   public async validateSsoToken(
     token: Partial<FidSsoToken>,
-    maxAgeMs: number = 15 * 60 * 1000,
-    trustedWebauthnKey?: string
+    maxAgeMs: number = 15 * 60 * 1000
   ): Promise<{ valid: boolean; error?: string }> {
     if (!token) {
       return { valid: false, error: "Missing token payload" };
     }
 
-    // Determine verification key based on masterKeySource
-    let verificationKey: string;
-    let sourceId: string;
-
-    if (token.masterKeySource?.type === 'zen') {
-      verificationKey = token.masterKeySource.pubKey;
-      sourceId = token.masterKeySource.pubKey;
-    } else if (token.masterKeySource?.type === 'webauthn') {
-      // Fail closed: with no registered key to compare against there is nothing to
-      // verify, since the token carries its own publicKeyPem and an attacker can
-      // simply sign with a key they generated.
-      if (!trustedWebauthnKey) {
-        return {
-          valid: false,
-          error: "WebAuthn token requires trustedWebauthnKey (the public key registered for this credentialId)"
-        };
-      }
-      if (trustedWebauthnKey !== token.masterKeySource.publicKeyPem) {
-        return { valid: false, error: "WebAuthn public key does not match registered credential" };
-      }
-      verificationKey = trustedWebauthnKey;
-      sourceId = token.masterKeySource.credentialId;
-    } else {
-      // Backward compatibility: use zenPubKey
-      verificationKey = token.zenPubKey ?? '';
-      sourceId = token.zenPubKey ?? '';
-    }
+    // masterKeySource is the canonical location; fall back to the flat zenPubKey field.
+    const verificationKey = token.masterKeySource?.pubKey ?? token.zenPubKey ?? '';
+    const sourceId = verificationKey;
 
     if (!token.username || !token.issuedAt || !verificationKey || !token.signature || !token.clientId || !token.instanceDomain || !token.nonce) {
       return { valid: false, error: "Missing required ssoToken fields (username, issuedAt, verificationKey, signature, clientId, instanceDomain, nonce)" };
@@ -158,43 +113,7 @@ export class FidSsoHandler {
 
     const tokenPayload = `${token.clientId}:${token.instanceDomain}:${token.username}:${sourceId}:${token.issuedAt}:${token.nonce}`;
 
-    let signatureValid: boolean;
-    if (token.masterKeySource?.type === 'webauthn') {
-      if (!token.webauthnAssertion?.authenticatorData || !token.webauthnAssertion?.clientDataJSON) {
-        return { valid: false, error: "Missing WebAuthn assertion (authenticatorData/clientDataJSON)" };
-      }
-
-      const authenticatorData = base64UrlToBytes(token.webauthnAssertion.authenticatorData);
-      const clientDataJSON = base64UrlToBytes(token.webauthnAssertion.clientDataJSON);
-      const signatureBytes = base64UrlToBytes(token.signature);
-
-      // Bind the assertion to this exact SSO request: the authenticator's signed
-      // challenge must equal SHA-256(tokenPayload), otherwise an assertion signed
-      // for a different login could be replayed here.
-      let clientData: { type?: string; challenge?: string };
-      try {
-        clientData = JSON.parse(Buffer.from(clientDataJSON).toString("utf8"));
-      } catch {
-        return { valid: false, error: "Malformed WebAuthn clientDataJSON" };
-      }
-      const expectedChallenge = crypto.createHash("sha256").update(tokenPayload).digest().toString("base64url");
-      if (clientData.type !== "webauthn.get" || clientData.challenge !== expectedChallenge) {
-        return { valid: false, error: "WebAuthn assertion does not match this SSO request" };
-      }
-
-      signatureValid = await verifyAssertionSignature(
-        {
-          credentialId: new Uint8Array(),
-          credentialIdBase64Url: sourceId,
-          authenticatorData,
-          clientDataJSON,
-          signature: signatureBytes
-        },
-        verificationKey
-      );
-    } else {
-      signatureValid = await verifySignature(tokenPayload, token.signature, verificationKey);
-    }
+    const signatureValid = await verifySignature(tokenPayload, token.signature, verificationKey);
 
     if (!signatureValid) {
       return { valid: false, error: "Invalid SSO token signature" };
@@ -224,9 +143,8 @@ export class FidSsoHandler {
  */
   public async verifySsoToken(
     token: Partial<FidSsoToken>,
-    maxAgeMs: number = 15 * 60 * 1000,
-    trustedWebauthnKey?: string
+    maxAgeMs: number = 15 * 60 * 1000
   ): Promise<boolean> {
-    return (await this.validateSsoToken(token, maxAgeMs, trustedWebauthnKey)).valid;
+    return (await this.validateSsoToken(token, maxAgeMs)).valid;
   }
 }

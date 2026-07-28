@@ -48,29 +48,12 @@ test("Zen seed matches the pinned cross-implementation vector", () => {
   );
 });
 
-test("WebAuthn identity derives from the PRF secret, never from the public key", async () => {
-  const { createWebAuthnMasterKeySource } = await import("../src/index.js");
-  const keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
-  const spki = Buffer.from(await crypto.subtle.exportKey("spki", keyPair.publicKey)).toString("base64");
-  const pem = `-----BEGIN PUBLIC KEY-----\n${spki.match(/.{1,64}/g)!.join("\n")}\n-----END PUBLIC KEY-----\n`;
-
-  // publicKeyPem alone is published in every SSO token, so it must not be enough to derive.
-  assert.throws(
-    () => deriveApSeed(createWebAuthnMasterKeySource("cred-abc", keyPair.publicKey, pem), "tunecamp.org", "alice"),
-    /requires prfSecret/
-  );
-
-  const prfSecret = new Uint8Array(32).fill(7);
-  const withPrf = createWebAuthnMasterKeySource("cred-abc", keyPair.publicKey, pem, prfSecret);
-  const seed = deriveApSeed(withPrf, "tunecamp.org", "alice");
-  assert.strictEqual(seed.length, 32);
-  // Deterministic for the same credential, distinct per instance.
-  assert.deepStrictEqual(seed, deriveApSeed(withPrf, "tunecamp.org", "alice"));
-  assert.notDeepStrictEqual(seed, deriveApSeed(withPrf, "mastodon.social", "alice"));
-
-  // A different authenticator secret must yield a different identity.
-  const otherPrf = createWebAuthnMasterKeySource("cred-abc", keyPair.publicKey, pem, new Uint8Array(32).fill(9));
-  assert.notDeepStrictEqual(seed, deriveApSeed(otherPrf, "tunecamp.org", "alice"));
+test("The master private key is never recoverable from what a token publishes", () => {
+  // zen_pub travels in every SSO token and is public by design. The AP private key must
+  // depend on the secret half only, so seeing the public key must not let anyone re-derive it.
+  const withRealPriv = deriveApSeed(createZenMasterKeySource(ZEN_PRIV, ZEN_PUB), "tunecamp.org", "alice");
+  const withPubAsSecret = deriveApSeed(createZenMasterKeySource(ZEN_PUB, ZEN_PUB), "tunecamp.org", "alice");
+  assert.notDeepStrictEqual(withRealPriv, withPubAsSecret);
 });
 
 test("Empty Zen private key is refused, not silently derived from", () => {

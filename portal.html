@@ -179,15 +179,6 @@
                     </button>
                 </div>
 
-                <div id="ssoPasskeyActions" class="pt-4 border-t border-anthro-dark/10 space-y-2">
-                    <label class="block text-[10px] font-mono uppercase text-anthro-muted">Oppure accedi con Passkey</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="ssoPasskeyUserInput" placeholder="username passkey" class="flex-1 px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
-                        <button id="ssoAuthorizeWebauthnBtn" class="btn-anthro-outline text-xs whitespace-nowrap">
-                            <i class="fa-solid fa-fingerprint mr-1"></i>Passkey
-                        </button>
-                    </div>
-                </div>
             </div>
         </section>
 
@@ -219,7 +210,7 @@
             <!-- 3 Column Anthropic-Style Card Layout -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-                <!-- Card 1: Identity Creation (Zen SEA + Passkey) -->
+                <!-- Card 1: Identity Creation (Zen SEA) -->
                 <div class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
                         <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">IDENTITY CREATION</span>
@@ -227,14 +218,8 @@
                             Master Key Source
                         </h2>
                         <p class="text-anthro-muted text-xs leading-relaxed">
-                            Scegli la sorgente della tua master key. Entrambe producono la stessa identità ActivityPub deterministica per dominio/username.
+                            La tua identità si deriva da alias + passphrase. Nessun account, nessun server: le stesse due parole riproducono la stessa identità su qualsiasi dispositivo, e da lì un'identità ActivityPub deterministica per dominio/username.
                         </p>
-
-                        <!-- Tabs -->
-                        <div class="flex gap-2 border-b border-anthro-dark/10 mb-4" role="tablist">
-                            <button id="tabZen" role="tab" aria-selected="true" class="px-3 py-2 text-xs font-mono text-anthro-dark border-b-2 border-anthro-dark font-medium">Zen SEA</button>
-                            <button id="tabPasskey" role="tab" aria-selected="false" class="px-3 py-2 text-xs font-mono text-anthro-muted border-b-2 border-transparent hover:text-anthro-dark">Passkey / WebAuthn</button>
-                        </div>
 
                         <!-- Zen SEA Pane -->
                         <div id="zenPane" role="tabpanel">
@@ -247,7 +232,18 @@
                                 <div>
                                     <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Passphrase Segreta</label>
                                     <input type="password" id="passInput" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                    <p id="passStrength" class="text-[10px] font-mono mt-1 text-anthro-muted"></p>
+                                    <p class="text-[10px] text-anthro-muted mt-1 leading-relaxed">
+                                        La tua chiave pubblica viaggia in chiaro in ogni token SSO: chi la vede può provare
+                                        passphrase offline all'infinito, senza nessun server che lo rallenti. La passphrase
+                                        <strong>è</strong> la tua identità, e non si può cambiare senza cambiare identità.
+                                    </p>
                                 </div>
+
+                                <label class="flex items-start gap-2 text-[10px] text-anthro-muted cursor-pointer">
+                                    <input type="checkbox" id="existingIdentityCheck" class="mt-0.5">
+                                    <span>Sto sbloccando un'identità che esiste già (salta il controllo di robustezza)</span>
+                                </label>
 
                                 <button type="submit" class="w-full btn-anthro text-xs mt-2">
                                     <span>Authenticate Pair</span>
@@ -256,31 +252,6 @@
                             </form>
                         </div>
 
-                        <!-- Passkey Pane -->
-                        <div id="passkeyPane" role="tabpanel" hidden class="space-y-3 pt-2">
-                            <div>
-                                <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
-                                <input type="text" id="pkUserInput" required placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
-                            </div>
-
-                            <div class="p-3 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs text-anthro-muted">
-                                <p class="font-medium mb-1">Crea una Passkey</p>
-                                <p>Usa FaceID, TouchID, Windows Hello o una security key (YubiKey). La passkey viene salvata nel tuo gestore credenziali (iCloud Keychain, Google Password Manager, Proton Pass, 1Password, ecc.) e sincronizzata sui tuoi dispositivi.</p>
-                                <p class="mt-1">Se hai gia&#768; una passkey ma hai cancellato i dati del sito, usa <span class="font-mono">Usa Passkey Esistente</span>: la chiave e&#768; rimasta nel gestore credenziali, qui va solo ricollegata.</p>
-                            </div>
-
-                            <button id="createPasskeyBtn" class="w-full btn-anthro text-xs" disabled>
-                                <span><i class="fa-solid fa-fingerprint mr-2"></i>Crea Passkey</span>
-                                <span class="font-mono">→</span>
-                            </button>
-
-                            <button id="usePasskeyBtn" class="w-full btn-anthro text-xs" disabled>
-                                <span><i class="fa-solid fa-rotate-left mr-2"></i>Usa Passkey Esistente</span>
-                                <span class="font-mono">→</span>
-                            </button>
-
-                            <div id="passkeyInfo" class="hidden p-3 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark"></div>
-                        </div>
                     </div>
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
@@ -521,30 +492,9 @@
         let wsRelay = null;
         const RELAY_URL = "wss://delay.scobrudot.dev/zen";
 
-        // A passkey identity is tracked separately from the Zen SEA one: currentKeys holds a
-        // keypair whose private half the dashboard can display and sign with, and a passkey has
-        // no such half — the private key never leaves the authenticator. Keeping them apart
-        // stops passkey state from being mistaken for something signable.
-        let passkeySession = null;
-
-        function loadPasskeySession() {
-            try {
-                const raw = localStorage.getItem("fid_passkey_session");
-                passkeySession = raw ? JSON.parse(raw) : null;
-            } catch (e) {
-                passkeySession = null;
-            }
-        }
-
-        function setPasskeySession(alias, credentialIdB64, rpId) {
-            passkeySession = { alias, credentialIdB64, rpId };
-            localStorage.setItem("fid_passkey_session", JSON.stringify(passkeySession));
-            updateDashboardUI();
-        }
-
-        // The alias to act as, whichever identity the user actually signed in with.
+        // The alias to act as.
         function activeAlias() {
-            return currentAlias !== "anonymous" ? currentAlias : (passkeySession?.alias || "anonymous");
+            return currentAlias;
         }
 
         // Toast Helper
@@ -608,40 +558,47 @@
             return Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // Same PBKDF2 derivation as computePbkdf2Bits, but over raw key bytes (e.g. a
-        // passkey's SPKI-DER public key) instead of a UTF-8 password string. Must match
-        // fid's deriveApSeed() server-side exactly: masterSecret bytes fed straight in.
-        async function computePbkdf2BitsFromBytes(passBytes, saltStr) {
-            const encoder = new TextEncoder();
-            const keyMaterial = await crypto.subtle.importKey(
-                "raw",
-                passBytes,
-                "PBKDF2",
-                false,
-                ["deriveBits"]
-            );
-            const derivedBits = await crypto.subtle.deriveBits(
-                {
-                    name: "PBKDF2",
-                    salt: encoder.encode(saltStr),
-                    iterations: 10000,
-                    hash: "SHA-256"
-                },
-                keyMaterial,
-                256
-            );
-            return Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
         async function deriveDeterministicPair(user, pass) {
             const seedStr = user + ':' + pass;
             return zenPair({ seed: seedStr });
         }
 
+        // The passphrase is the master key. zen_pub is published in every SSO token, so an
+        // attacker who has seen one token can guess offline forever: there is no server to
+        // rate-limit and no lockout. Entropy is the only defence, and the passphrase cannot
+        // be rotated later without becoming a different identity.
+        const WEAK_PASSPHRASES = [
+            "password", "passphrase", "123456789012", "qwertyuiop", "letmein",
+            "changeme", "iloveyou", "admin1234567", "tunecamp", "fediverse"
+        ];
+
+        function checkPassphrase(pass) {
+            if (pass.length < 12) {
+                return { ok: false, msg: `Troppo corta: ${pass.length}/12 caratteri minimi.` };
+            }
+            const lower = pass.toLowerCase();
+            if (WEAK_PASSPHRASES.some(w => lower.includes(w))) {
+                return { ok: false, msg: "Contiene una parola troppo comune." };
+            }
+            if (new Set(pass).size < 8) {
+                return { ok: false, msg: "Troppo ripetitiva: servono almeno 8 caratteri distinti." };
+            }
+            const strong = pass.length >= 20 || (pass.length >= 16 && /\s/.test(pass));
+            return { ok: true, msg: strong ? "Robusta." : "Accettabile — più lunga è, meglio è." };
+        }
+
+        function updatePassStrength() {
+            const el = document.getElementById("passStrength");
+            const pass = document.getElementById("passInput")?.value || "";
+            if (!el) return;
+            if (!pass) { el.textContent = ""; return; }
+            const result = checkPassphrase(pass);
+            el.textContent = result.msg;
+            el.className = "text-[10px] font-mono mt-1 " + (result.ok ? "text-emerald-600" : "text-rose-600");
+        }
+
         // Session Persistence
         async function initOrLoadSession() {
-            loadPasskeySession();
-
             const savedAlias = localStorage.getItem("fid_user_alias");
             const savedPriv = localStorage.getItem("fid_master_priv_key");
             const savedPub = localStorage.getItem("fid_zen_pub_key");
@@ -689,6 +646,24 @@
                 return;
             }
 
+            // Deriving is the same operation for a new and an existing identity, so the strength
+            // check cannot be applied unconditionally without permanently locking out anyone who
+            // already has a weak passphrase. They opt out explicitly; new identities cannot.
+            const unlockingExisting = document.getElementById("existingIdentityCheck")?.checked;
+            if (!unlockingExisting) {
+                const strength = checkPassphrase(pass);
+                if (!strength.ok) {
+                    alert(
+                        `Passphrase troppo debole: ${strength.msg}\n\n` +
+                        "La tua chiave pubblica è visibile in ogni token SSO, quindi la passphrase " +
+                        "può essere indovinata offline senza limiti di tentativi. Non è modificabile " +
+                        "in seguito: cambiarla significa cambiare identità.\n\n" +
+                        "Se stai sbloccando un'identità che hai già creato, spunta la casella."
+                    );
+                    return;
+                }
+            }
+
             let pair;
             try {
                 pair = await deriveDeterministicPair(user, pass);
@@ -716,13 +691,7 @@
             const privInput = document.getElementById("dashMasterPrivKey");
             const userIn = document.getElementById("userInput");
 
-            // With no Zen login the badge would read @anonymous even right after the user
-            // created or re-linked a passkey, which reads as "nothing happened".
-            if (badge) {
-                badge.textContent = currentAlias === "anonymous" && passkeySession
-                    ? `@${passkeySession.alias} · passkey`
-                    : `@${currentAlias}`;
-            }
+            if (badge) badge.textContent = `@${currentAlias}`;
             if (pubInput) pubInput.value = currentKeys.pub;
             if (privInput) privInput.value = currentKeys.priv;
             if (userIn) userIn.value = currentAlias !== "anonymous" ? currentAlias : "";
@@ -933,7 +902,6 @@
                 box.classList.remove("hidden");
             }
             document.getElementById("ssoActions")?.classList.add("hidden");
-            document.getElementById("ssoPasskeyActions")?.classList.add("hidden");
         }
 
         async function checkSsoQueryParams() {
@@ -970,9 +938,6 @@
             }
 
             ssoRequest = { clientId, instanceDomain, redirectUri: validRedirectUri };
-
-            const pkUserEl = document.getElementById("ssoPasskeyUserInput");
-            if (pkUserEl && activeAlias() !== "anonymous") pkUserEl.value = activeAlias();
         }
 
         async function handleSsoAuthorize() {
@@ -1084,6 +1049,7 @@
 
             // Bind Event Listeners
             document.getElementById('userPassForm')?.addEventListener('submit', handleUserPassSubmit);
+            document.getElementById('passInput')?.addEventListener('input', updatePassStrength);
             document.getElementById('ssoAuthorizeBtn')?.addEventListener('click', handleSsoAuthorize);
             document.getElementById('ssoCancelBtn')?.addEventListener('click', handleSsoCancel);
             document.getElementById('exportIdentityBackupBtn')?.addEventListener('click', exportIdentityBackup);
@@ -1096,443 +1062,8 @@
             document.getElementById('apUserInput')?.addEventListener('input', updateApDerivation);
             document.getElementById('generateSsoTokenPreviewBtn')?.addEventListener('click', generateSsoTokenPreview);
 
-            // Tab Switching
-            const tabZen = document.getElementById('tabZen');
-            const tabPasskey = document.getElementById('tabPasskey');
-            const zenPane = document.getElementById('zenPane');
-            const passkeyPane = document.getElementById('passkeyPane');
             const methodBadge = document.getElementById('methodBadge');
-
-            function switchTab(tab) {
-                if (tab === 'zen') {
-                    tabZen.className = 'px-3 py-2 text-xs font-mono text-anthro-dark border-b-2 border-anthro-dark font-medium';
-                    tabZen.setAttribute('aria-selected', 'true');
-                    tabPasskey.className = 'px-3 py-2 text-xs font-mono text-anthro-muted border-b-2 border-transparent hover:text-anthro-dark';
-                    tabPasskey.setAttribute('aria-selected', 'false');
-                    zenPane.hidden = false;
-                    passkeyPane.hidden = true;
-                    if (methodBadge) methodBadge.textContent = 'Zen SEA (Gun/PBKDF2)';
-                } else {
-                    tabPasskey.className = 'px-3 py-2 text-xs font-mono text-anthro-dark border-b-2 border-anthro-dark font-medium';
-                    tabPasskey.setAttribute('aria-selected', 'true');
-                    tabZen.className = 'px-3 py-2 text-xs font-mono text-anthro-muted border-b-2 border-transparent hover:text-anthro-dark';
-                    tabZen.setAttribute('aria-selected', 'false');
-                    zenPane.hidden = true;
-                    passkeyPane.hidden = false;
-                    if (methodBadge) methodBadge.textContent = 'Passkey / WebAuthn';
-                    checkPasskeyAvailability();
-                }
-            }
-
-            tabZen?.addEventListener('click', () => switchTab('zen'));
-            tabPasskey?.addEventListener('click', () => switchTab('passkey'));
-
-            // Passkey / WebAuthn Registration
-            let pkPublicKeyPem = null;
-
-            async function checkPasskeyAvailability() {
-                const btn = document.getElementById('createPasskeyBtn');
-                const useBtn = document.getElementById('usePasskeyBtn');
-                if (!btn) return;
-                if (!window.PublicKeyCredential) {
-                    btn.disabled = true;
-                    if (useBtn) useBtn.disabled = true;
-                    btn.querySelector('span').innerHTML = '<i class="fa-solid fa-lock mr-2"></i>Non Supportato';
-                    return;
-                }
-                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                if (!available) {
-                    btn.disabled = true;
-                    if (useBtn) useBtn.disabled = true;
-                    btn.querySelector('span').innerHTML = '<i class="fa-solid fa-lock mr-2"></i>No Authenticator';
-                    return;
-                }
-                btn.disabled = false;
-                if (useBtn) useBtn.disabled = false;
-                btn.querySelector('span').innerHTML = '<i class="fa-solid fa-fingerprint mr-2"></i>Crea Passkey';
-            }
-
-            async function handlePasskeyRegistration() {
-                const username = document.getElementById('pkUserInput')?.value.trim();
-                if (!username) {
-                    alert('Inserisci un username per la passkey.');
-                    return;
-                }
-
-                const btn = document.getElementById('createPasskeyBtn');
-                if (btn) btn.disabled = true;
-
-                try {
-                    const rpId = window.location.hostname || 'fid-portal.vercel.app';
-                    const userId = new TextEncoder().encode(username + '@' + rpId);
-
-                    const publicKey = {
-                        challenge: crypto.getRandomValues(new Uint8Array(32)),
-                        rp: { name: 'FID Protocol', id: rpId },
-                        user: { id: userId, name: username, displayName: username },
-                        pubKeyCredParams: [
-                            { type: 'public-key', alg: -7 },
-                            { type: 'public-key', alg: -257 }
-                        ],
-                        authenticatorSelection: {
-                            // Discoverable (resident) credential: without it the authenticator
-                            // can only answer with an explicit allowCredentials list, so a browser
-                            // that lost its IndexedDB record could never find the passkey again.
-                            residentKey: 'required',
-                            requireResidentKey: true,
-                            userVerification: 'required'
-                        },
-                        // The PRF extension is what makes a passkey usable as a master key: it yields a
-                        // per-credential secret that never leaves the authenticator. Without it the only
-                        // credential-bound material we could derive from is the public key, which ships
-                        // inside every SSO token and is therefore no secret at all.
-                        extensions: { prf: {} },
-                        timeout: 60000
-                    };
-
-                    const credential = await navigator.credentials.create({ publicKey });
-
-                    const prfEnabled = credential.getClientExtensionResults?.().prf?.enabled;
-                    if (!prfEnabled) {
-                        throw new Error(
-                            "Questo autenticatore non supporta l'estensione PRF, richiesta per derivare " +
-                            "un'identità ActivityPub dalla passkey. Usa un autenticatore compatibile " +
-                            "(browser aggiornato, o chiave hardware con hmac-secret) oppure accedi con Zen SEA."
-                        );
-                    }
-
-                    const { cryptoKey } = await extractCosePublicKey(credential);
-                    const spki = await crypto.subtle.exportKey('spki', cryptoKey);
-                    const pubKeyPem = '-----BEGIN PUBLIC KEY-----\n' + btoa(String.fromCharCode(...new Uint8Array(spki))).match(/.{1,64}/g).join('\n') + '\n-----END PUBLIC KEY-----';
-                    pkPublicKeyPem = pubKeyPem;
-
-                    // Store in IndexedDB (rawId is the ArrayBuffer form; .id is a base64url string, not usable as raw bytes).
-                    // spki bytes are kept only for assertion-signature verification, never as seed material.
-                    await storePasskeyCredential(rpId, username, credential.rawId, pubKeyPem, new Uint8Array(spki));
-                    setPasskeySession(username, base64url(new Uint8Array(credential.rawId)), rpId);
-
-                    // Show result
-                    const infoDiv = document.getElementById('passkeyInfo');
-                    if (infoDiv) {
-                        infoDiv.classList.remove('hidden');
-                        infoDiv.innerHTML = `<p class="font-semibold mb-1">Passkey creata!</p>
-                            <p>Credential ID: <span class="break-all">${credential.id}</span></p>
-                            <p>Public Key: <span class="break-all text-[10px]">${pubKeyPem}</span></p>
-                            <p class="text-emerald-700 mt-1">Identità ActivityPub pronta per @${username} su ${rpId}</p>`;
-                    }
-
-                    if (btn) btn.disabled = false;
-                    showToast('Passkey creata con successo!');
-                } catch (err) {
-                    console.error('[FID] Passkey registration failed:', err);
-                    if (btn) btn.disabled = false;
-                    alert('Registrazione passkey fallita: ' + err.message);
-                }
-            }
-
-            function base64url(bytes) {
-                return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-            }
-
-            // Minimal generic CBOR decoder - handles the subset WebAuthn actually emits
-            // (uints, negints, byte/text strings, arrays, maps). Used both for attestationObject
-            // (fmt/authData/attStmt) and for the COSE_Key map inside authData.
-            function parseCbor(bytes) {
-                let offset = 0;
-                const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-                function readItem() {
-                    const initial = bytes[offset];
-                    const majorType = initial >> 5;
-                    const addInfo = initial & 0x1f;
-                    offset++;
-                    let length;
-                    if (addInfo < 24) length = addInfo;
-                    else if (addInfo === 24) { length = bytes[offset]; offset += 1; }
-                    else if (addInfo === 25) { length = view.getUint16(offset); offset += 2; }
-                    else if (addInfo === 26) { length = view.getUint32(offset); offset += 4; }
-                    else throw new Error('Unsupported CBOR length encoding.');
-                    switch (majorType) {
-                        case 0: return length;
-                        case 1: return -1 - length;
-                        case 2: { const val = bytes.slice(offset, offset + length); offset += length; return val; }
-                        case 3: { const val = new TextDecoder().decode(bytes.slice(offset, offset + length)); offset += length; return val; }
-                        case 4: { const arr = []; for (let i = 0; i < length; i++) arr.push(readItem()); return arr; }
-                        case 5: { const map = new Map(); for (let i = 0; i < length; i++) { const k = readItem(); const v = readItem(); map.set(k, v); } return map; }
-                        default: throw new Error('Unsupported CBOR major type: ' + majorType);
-                    }
-                }
-                return readItem();
-            }
-
-            // Parses authData out of attestationObject (CBOR: {fmt, authData, attStmt}) rather than relying
-            // on the AuthenticatorAttestationResponse.authenticatorData convenience getter (unreliable across
-            // browsers), then extracts the real COSE_Key public key - matches fid's canonical ES256/RS256 support.
-            async function extractCosePublicKey(credential) {
-                const attestationObject = new Uint8Array(credential.response.attestationObject);
-                const attObj = parseCbor(attestationObject);
-                const authData = attObj.get('authData');
-                if (!authData || !(authData[32] & 0x40)) throw new Error('Authenticator did not return attested credential data.');
-                const credIdLen = (authData[53] << 8) | authData[54];
-                const coseKeyBytes = authData.slice(55 + credIdLen);
-                const coseKey = parseCbor(coseKeyBytes);
-
-                const kty = coseKey.get(1);
-                let cryptoKey, rawKeyBytes;
-                if (kty === 2) { // EC2 -> ES256 / P-256
-                    if (coseKey.get(-1) !== 1) throw new Error('Unsupported EC curve (expected P-256).');
-                    const x = coseKey.get(-2), y = coseKey.get(-3);
-                    rawKeyBytes = new Uint8Array(1 + x.length + y.length);
-                    rawKeyBytes[0] = 0x04;
-                    rawKeyBytes.set(x, 1);
-                    rawKeyBytes.set(y, 1 + x.length);
-                    cryptoKey = await crypto.subtle.importKey('raw', rawKeyBytes, { name: 'ECDSA', namedCurve: 'P-256' }, true, []);
-                } else if (kty === 3) { // RSA -> RS256
-                    const n = coseKey.get(-1), e = coseKey.get(-2);
-                    rawKeyBytes = n;
-                    const jwk = { kty: 'RSA', n: base64url(n), e: base64url(e), alg: 'RS256', ext: true };
-                    cryptoKey = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, true, []);
-                } else {
-                    throw new Error('Unsupported passkey key type (kty=' + kty + '). Use a passkey supporting ES256 or RS256.');
-                }
-                return { cryptoKey, rawKeyBytes };
-            }
-
-            async function extractPublicKeyPem(credential) {
-                const { cryptoKey } = await extractCosePublicKey(credential);
-                const spki = await crypto.subtle.exportKey('spki', cryptoKey);
-                const base64 = btoa(String.fromCharCode(...new Uint8Array(spki)));
-                return '-----BEGIN PUBLIC KEY-----\n' + base64.match(/.{1,64}/g).join('\n') + '\n-----END PUBLIC KEY-----';
-            }
-
-            function openDB() {
-                return new Promise((resolve, reject) => {
-                    const req = indexedDB.open('fid_passkeys', 1);
-                    req.onupgradeneeded = (e) => {
-                        const db = e.target.result;
-                        if (!db.objectStoreNames.contains('credentials')) {
-                            db.createObjectStore('credentials', { keyPath: 'id' });
-                        }
-                    };
-                    req.onsuccess = () => resolve(req.result);
-                    req.onerror = () => reject(req.error);
-                });
-            }
-
-            async function storePasskeyCredential(rpId, username, credentialId, publicKeyPem, spkiBytes) {
-                const db = await openDB();
-                const tx = db.transaction('credentials', 'readwrite');
-                tx.objectStore('credentials').put({
-                    id: rpId + ':' + username,
-                    rpId,
-                    username,
-                    credentialId,
-                    publicKeyPem,
-                    spkiBytes,
-                    createdAt: new Date().toISOString()
-                });
-                return new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
-            }
-
-            async function loadPasskeyCredential(rpId, username) {
-                const db = await openDB();
-                const tx = db.transaction('credentials', 'readonly');
-                const store = tx.objectStore('credentials');
-                const req = store.get(rpId + ':' + username);
-                return new Promise((resolve, reject) => {
-                    req.onsuccess = () => resolve(req.result);
-                    req.onerror = () => reject(req.error);
-                });
-            }
-
-            // The passkey itself lives in the authenticator / password manager and survives
-            // "clear site data"; what does not survive is the credentialId -> username record
-            // in IndexedDB. A discoverable-credential assertion (no allowCredentials) asks the
-            // authenticator which passkeys it holds for this rpId and rebuilds that record,
-            // so the user recovers instead of being told to register a second identity.
-            async function discoverPasskeyCredential(rpId, username) {
-                const assertion = await navigator.credentials.get({
-                    publicKey: {
-                        challenge: crypto.getRandomValues(new Uint8Array(32)),
-                        rpId,
-                        userVerification: 'required',
-                        timeout: 60000
-                    }
-                });
-                if (!assertion?.rawId) return null;
-
-                // Registration set user.id to `${username}@${rpId}`. If the authenticator hands
-                // back a different user's credential, refuse rather than binding this username
-                // to a credentialId that is not theirs.
-                const handle = assertion.response.userHandle;
-                if (handle) {
-                    const decoded = new TextDecoder().decode(new Uint8Array(handle));
-                    if (decoded !== username + '@' + rpId) {
-                        throw new Error(`La passkey selezionata appartiene a "${decoded.split('@')[0]}", non a "${username}".`);
-                    }
-                }
-
-                // An assertion carries no public key, so publicKeyPem stays empty here. That is
-                // fine for an identity the instance has already seen: it pinned the key to this
-                // credentialId on first login and verifies against the pinned copy from then on.
-                const credentialId = new Uint8Array(assertion.rawId);
-                await storePasskeyCredential(rpId, username, credentialId, '', null);
-                return { credentialId, publicKeyPem: '', recovered: true };
-            }
-
-            // "Usa Passkey Esistente": re-link a passkey the credential manager still holds
-            // after the browser's local record was wiped.
-            async function handlePasskeyRecovery() {
-                const username = document.getElementById('pkUserInput')?.value.trim();
-                if (!username) {
-                    alert('Inserisci lo username associato alla tua passkey.');
-                    return;
-                }
-
-                const btn = document.getElementById('usePasskeyBtn');
-                if (btn) btn.disabled = true;
-                try {
-                    const rpId = window.location.hostname || 'fid-portal.vercel.app';
-                    const existing = await loadPasskeyCredential(rpId, username);
-                    const cred = existing || await discoverPasskeyCredential(rpId, username);
-                    if (!cred) {
-                        alert(`Nessuna passkey trovata per @${username} su ${rpId}.`);
-                        return;
-                    }
-
-                    const credentialIdB64 = base64url(new Uint8Array(cred.credentialId));
-                    setPasskeySession(username, credentialIdB64, rpId);
-
-                    const infoDiv = document.getElementById('passkeyInfo');
-                    if (infoDiv) {
-                        infoDiv.classList.remove('hidden');
-                        infoDiv.innerHTML = `<p class="font-semibold mb-1">Passkey ricollegata!</p>
-                            <p>Credential ID: <span class="break-all">${credentialIdB64}</span></p>
-                            <p class="text-emerald-700 mt-1">Identità ActivityPub pronta per @${username} su ${rpId}</p>`;
-                    }
-                    showToast(existing ? 'Passkey già collegata su questo browser.' : 'Passkey ricollegata!');
-                } catch (err) {
-                    console.error('[FID] Passkey recovery failed:', err);
-                    alert('Recupero passkey fallito: ' + err.message);
-                } finally {
-                    if (btn) btn.disabled = false;
-                }
-            }
-
-            // SSO Authorize via real Passkey assertion (navigator.credentials.get). Builds a
-            // FidSsoToken with masterKeySource.type === 'webauthn', signed by the authenticator
-            // itself (challenge = SHA-256 of the exact token payload, binding the assertion to
-            // this login), then redirects to the client app's redirectUri like handleSsoAuthorize.
-            async function handleSsoAuthorizeWebauthn() {
-                const btn = document.getElementById('ssoAuthorizeWebauthnBtn');
-                const username = document.getElementById('ssoPasskeyUserInput')?.value.trim();
-                if (!username) {
-                    alert('Inserisci lo username associato alla tua passkey.');
-                    return;
-                }
-
-                const rpId = window.location.hostname || 'fid-portal.vercel.app';
-                let stored = await loadPasskeyCredential(rpId, username);
-                if (!stored) {
-                    // No local record: the passkey may still exist in the credential manager,
-                    // so try discovery before sending the user back to registration.
-                    try {
-                        stored = await discoverPasskeyCredential(rpId, username);
-                    } catch (err) {
-                        alert('Recupero passkey fallito: ' + err.message);
-                        return;
-                    }
-                    if (!stored) {
-                        alert(`Nessuna passkey trovata per @${username} su questo dominio. Creala prima dal pannello Identity Creation.`);
-                        return;
-                    }
-                }
-
-                if (!ssoRequest) {
-                    showSsoRequestError("Richiesta SSO non valida: autorizzazione annullata.");
-                    return;
-                }
-                const { clientId, instanceDomain, redirectUri } = ssoRequest;
-
-                if (btn) btn.disabled = true;
-                try {
-                    const credentialIdB64 = base64url(new Uint8Array(stored.credentialId));
-                    const issuedAt = Date.now();
-                    const nonce = crypto.randomUUID().replace(/-/g, '');
-                    const tokenPayload = `${clientId}:${instanceDomain}:${username}:${credentialIdB64}:${issuedAt}:${nonce}`;
-                    const challenge = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tokenPayload)));
-
-                    const derivationSalt = `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`;
-
-                    // Same ceremony does double duty: it signs the SSO token payload, and its PRF
-                    // evaluation returns the per-credential secret we derive the ActivityPub identity
-                    // from. The PRF input is the derivation salt, so each (instance, user) pair gets a
-                    // distinct secret and the authenticator never releases anything reusable elsewhere.
-                    const assertion = await navigator.credentials.get({
-                        publicKey: {
-                            challenge,
-                            rpId,
-                            allowCredentials: [{ type: 'public-key', id: stored.credentialId }],
-                            userVerification: 'required',
-                            extensions: { prf: { eval: { first: new TextEncoder().encode(derivationSalt) } } },
-                            timeout: 60000
-                        }
-                    });
-
-                    const prfOutput = assertion.getClientExtensionResults?.().prf?.results?.first;
-                    if (!prfOutput) {
-                        throw new Error(
-                            "L'autenticatore non ha restituito un valore PRF: impossibile derivare l'identità " +
-                            "ActivityPub da questa passkey. Ricrea la passkey su un autenticatore che supporta PRF, " +
-                            "oppure accedi con Zen SEA."
-                        );
-                    }
-
-                    const authenticatorData = base64url(new Uint8Array(assertion.response.authenticatorData));
-                    const clientDataJSON = base64url(new Uint8Array(assertion.response.clientDataJSON));
-                    const signature = base64url(new Uint8Array(assertion.response.signature));
-
-                    const apSeed = await computePbkdf2BitsFromBytes(new Uint8Array(prfOutput), derivationSalt);
-
-                    const ssoToken = {
-                        clientId,
-                        instanceDomain,
-                        username,
-                        zenPubKey: '',
-                        actorUri: `https://${instanceDomain}/users/${username}`,
-                        issuedAt,
-                        nonce,
-                        masterKeySource: {
-                            type: 'webauthn',
-                            credentialId: credentialIdB64,
-                            publicKeyPem: stored.publicKeyPem
-                        },
-                        signature,
-                        webauthnAssertion: { authenticatorData, clientDataJSON }
-                    };
-
-                    if (!stored.publicKeyPem) {
-                        // Recovered credential: we have no local copy of the public key, so the
-                        // instance can only accept this token if it already pinned the key for
-                        // this credentialId on an earlier login.
-                        console.warn('[FID] SSO with recovered passkey: relying on the instance pinned public key.');
-                    }
-
-                    await deliverSsoPayload(instanceDomain, redirectUri, ssoToken, apSeed);
-                } catch (err) {
-                    console.error('[FID] Passkey SSO authorization failed:', err);
-                    alert('Autorizzazione con passkey fallita: ' + err.message);
-                } finally {
-                    if (btn) btn.disabled = false;
-                }
-            }
-
-            document.getElementById('ssoAuthorizeWebauthnBtn')?.addEventListener('click', handleSsoAuthorizeWebauthn);
-
-            document.getElementById('createPasskeyBtn')?.addEventListener('click', handlePasskeyRegistration);
-            document.getElementById('usePasskeyBtn')?.addEventListener('click', handlePasskeyRecovery);
+            if (methodBadge) methodBadge.textContent = 'Zen SEA (Gun/PBKDF2)';
 
             // FID Registry - Cross-Instance Linking
             document.getElementById('fidRegistryAddBtn')?.addEventListener('click', handleFidRegistryAdd);
@@ -1552,13 +1083,9 @@
                 }
 
                 // This flow signs the instance challenge with the Zen SEA private key, and
-                // /api/auth/zen/link verifies that signature. A passkey cannot produce one —
-                // its private key never leaves the authenticator — so the old wording ("o
-                // creare una passkey") promised a path that does not exist.
+                // /api/auth/zen/link verifies that signature.
                 if (!currentKeys.priv || currentAlias === "anonymous") {
-                    alert(passkeySession
-                        ? 'Add to Registry richiede un\'identità Zen SEA. Con una passkey, collega l\'istanza tramite il flusso FID SSO.'
-                        : 'Devi prima autenticarti con Zen SEA.');
+                    alert('Devi prima autenticarti con Zen SEA.');
                     return;
                 }
 

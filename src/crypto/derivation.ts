@@ -9,16 +9,17 @@ const SEED_LENGTH = 32;
 const HASH_ALGO = "sha256";
 
 /**
- * @llm-summary Derives a 32-byte deterministic seed from a master key source using PBKDF2.
- * @llm-context Used by deriveApIdentity to produce the same seed regardless of master key source (Zen SEA or WebAuthn).
- * The salt format is fixed: `fid:activitypub:${instanceDomain}:${username}` (lowercased).
+ * @llm-summary Derives a 32-byte deterministic seed from a Zen SEA master key using PBKDF2.
+ * @llm-context Used by deriveApIdentity. The salt format is fixed:
+ * `fid:activitypub:${instanceDomain}:${username}` (lowercased). Including the domain is deliberate —
+ * each instance gets a different ActivityPub key, so a compromised instance cannot impersonate the user
+ * elsewhere.
  * The Zen private key is used as PBKDF2 password in its UTF-8 string form — NOT hex-decoded. Zen SEA keys
  * are base64url, so hex-decoding them yielded a 0-byte secret and collapsed every user on a domain onto
  * one identity. UTF-8 is also what the browser portal feeds to `crypto.subtle`, so both sides now agree.
  * @llm-edge-cases Throws on an empty Zen private key rather than deriving from an empty password.
- * For WebAuthn, the publicKey must be exportable (raw). If not exportable, derivation will fail.
- * @llm-faq Q: Why same PBKDF2 params for both sources? A: Determinism — same (domain, username) + same master secret = same seed = same Ed25519 keys.
- * Q: Can I change the password encoding later? A: Not without re-keying every existing identity; `tests/derivation.test.ts` pins a known-answer vector to make any change fail loudly.
+ * @llm-faq Q: Why is this deterministic? A: Same (domain, username) + same master secret = same seed = same Ed25519 keys, so the identity needs no storage or backup.
+ * Q: Can I change the password encoding or iteration count later? A: Not without re-keying every existing identity; `tests/derivation.test.ts` pins a known-answer vector to make any change fail loudly.
  */
 export function deriveApSeed(
   source: MasterKeySource,
@@ -27,29 +28,12 @@ export function deriveApSeed(
 ): Uint8Array {
   const salt = `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`;
 
-  let masterSecret: Uint8Array;
-
-  if (source.type === 'zen') {
-    // Zen SEA: privKey is a base64url secp256k1 private key, used as a UTF-8 password.
-    if (!source.privKey) {
-      throw new Error('Zen source requires a non-empty privKey for seed derivation');
-    }
-    masterSecret = Buffer.from(source.privKey, 'utf8');
-  } else {
-    // WebAuthn: the master secret is the PRF extension output for this credential.
-    // It must never be the public key: publicKeyPem travels inside every SSO token, so
-    // deriving from it would let any relying instance (or anyone who saw one token)
-    // reconstruct the user's ActivityPub private key on every other domain.
-    if (!source.prfSecret || source.prfSecret.length === 0) {
-      throw new Error(
-        'WebAuthn source requires prfSecret (WebAuthn PRF extension output) for seed derivation. ' +
-        'It is obtained in the browser via navigator.credentials.get({ extensions: { prf: { eval: ... } } }) ' +
-        'and is not available server-side.'
-      );
-    }
-    masterSecret = source.prfSecret;
+  // Zen SEA: privKey is a base64url secp256k1 private key, used as a UTF-8 password.
+  if (!source.privKey) {
+    throw new Error('Zen source requires a non-empty privKey for seed derivation');
   }
-  
+  const masterSecret = Buffer.from(source.privKey, 'utf8');
+
   // PBKDF2 deterministic derivation
   return crypto.pbkdf2Sync(masterSecret, salt, PBKDF2_ITERATIONS, SEED_LENGTH, HASH_ALGO);
 }
@@ -76,12 +60,11 @@ export function seedToEd25519Pem(seed: Uint8Array): { privateKeyPem: string; pub
 }
 
 /**
- * @llm-summary Derives a deterministic ActivityPub Ed25519 identity from ANY master key source (Zen SEA or WebAuthn).
+ * @llm-summary Derives a deterministic ActivityPub Ed25519 identity from a Zen SEA master key source.
  * @llm-context Replaces deriveApKeypair. Called by SSO flow to produce actor URI, WebFinger handle, and PEM keys.
  * The derived keypair is NOT stored — it is regenerated each time from the master key source.
  * @llm-edge-cases If instanceDomain or username is empty, salt is malformed → empty actorUri/webfingerHandle.
- * For WebAuthn, publicKeyPem must be provided in MasterKeySource.
- * @llm-faq Q: Do Zen and WebAuthn produce the same AP keys for same user? A: Yes, same salt + PBKDF2 → same seed → same Ed25519 keys.
+ * @llm-faq Q: Does the same user get the same AP key on every instance? A: No — the salt includes instanceDomain, so each instance gets a distinct keypair from the same master key. The portable part is the Zen public key, not the AP key.
  * Q: Is the master private key stored? A: No, only derived PEM keys returned. Q: Can two usernames on same instance collide? A: No, salt includes username.
  */
 export function deriveApIdentity(
@@ -95,8 +78,7 @@ export function deriveApIdentity(
   const webfingerHandle = `@${username.toLowerCase()}@${instanceDomain.toLowerCase()}`;
   const actorUri = `https://${instanceDomain.toLowerCase()}/users/${username.toLowerCase()}`;
 
-  // Extract zenPubKey for backward compatibility (only for Zen source)
-  const zenPubKey = source.type === 'zen' ? source.pubKey : '';
+  const zenPubKey = source.pubKey;
 
   return {
     instanceDomain: instanceDomain.toLowerCase(),
