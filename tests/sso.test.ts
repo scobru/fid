@@ -88,6 +88,10 @@ test("Login with FID SSO Flow (Zen SEA)", async () => {
   assert.strictEqual(ssoToken.actorUri, "https://tunecamp.org/users/bob");
   assert.strictEqual(ssoToken.masterKeySource?.type, 'zen');
 
+  // The issued token must never carry the master private key, in any field.
+  assert.ok(!JSON.stringify(ssoToken).includes(keys.priv), "SSO token leaks the master private key");
+  assert.strictEqual((ssoToken.masterKeySource as Record<string, unknown>).privKey, undefined);
+
   // 3. App verifies SSO token
   const isValid = await ssoHandler.verifySsoToken(ssoToken);
   assert.strictEqual(isValid, true);
@@ -103,6 +107,33 @@ test("Login with FID SSO Flow (Zen SEA)", async () => {
   assert.strictEqual(forgedValid, false);
 });
 
+test("An SSO token can only be redeemed once", async () => {
+  const keys = await pair();
+  const ssoHandler = new FidSsoHandler("app-instance-secret-key-123");
+  const ssoReq = ssoHandler.createSsoRequest("client", "https://tunecamp.org/cb", "tunecamp.org");
+  const token = await ssoHandler.issueSsoToken(ssoReq, "bob", createZenMasterKeySource(keys.priv, keys.pub));
+
+  assert.strictEqual((await ssoHandler.validateSsoToken(token)).valid, true);
+
+  // The token travels in a URL fragment: whoever reads it later must not be able to reuse it.
+  const replayed = await ssoHandler.validateSsoToken(token);
+  assert.strictEqual(replayed.valid, false);
+  assert.match(replayed.error!, /already used/);
+});
+
+test("A failed validation does not burn the nonce", async () => {
+  const keys = await pair();
+  const ssoHandler = new FidSsoHandler("app-instance-secret-key-123");
+  const ssoReq = ssoHandler.createSsoRequest("client", "https://tunecamp.org/cb", "tunecamp.org");
+  const token = await ssoHandler.issueSsoToken(ssoReq, "bob", createZenMasterKeySource(keys.priv, keys.pub));
+
+  // An attacker replaying with a broken signature must not be able to lock the user out
+  // by consuming their nonce before the real callback arrives.
+  const tampered = { ...token, signature: "tampered_signature" };
+  assert.strictEqual((await ssoHandler.validateSsoToken(tampered)).valid, false);
+  assert.strictEqual((await ssoHandler.validateSsoToken(token)).valid, true);
+});
+
 test("verifyPassportSignature returns false on buffer length mismatch", async () => {
   const { verifyPassportSignature } = await import("../src/crypto/hmac.js");
   const badPassport = {
@@ -116,15 +147,31 @@ test("verifyPassportSignature returns false on buffer length mismatch", async ()
   assert.strictEqual(verifyPassportSignature(badPassport, "secret"), false);
 });
 
-test("WebAuthn SSO: validateSsoToken accepts a token signed with its own declared key", async () => {
+test("WebAuthn SSO: validateSsoToken verifies a genuine assertion against the registered key", async () => {
   const secret = "app-instance-secret-key-123";
   const ssoHandler = new FidSsoHandler(secret);
   const ssoReq = ssoHandler.createSsoRequest("client", "https://tunecamp.org/cb", "tunecamp.org");
   const keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
 
   const token = await buildWebauthnSsoToken(ssoHandler, ssoReq, "bob", keyPair, "cred-abc");
-  const result = await ssoHandler.validateSsoToken(token);
+  const registeredPem = token.masterKeySource.publicKeyPem;
+
+  const result = await ssoHandler.validateSsoToken(token, undefined, registeredPem);
   assert.strictEqual(result.valid, true);
+});
+
+test("WebAuthn SSO: a token validated without a registered key is refused", async () => {
+  const secret = "app-instance-secret-key-123";
+  const ssoHandler = new FidSsoHandler(secret);
+  const ssoReq = ssoHandler.createSsoRequest("client", "https://tunecamp.org/cb", "tunecamp.org");
+  const keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+
+  const token = await buildWebauthnSsoToken(ssoHandler, ssoReq, "bob", keyPair, "cred-abc");
+
+  // The token's own publicKeyPem proves nothing: anyone can generate a key and sign.
+  const result = await ssoHandler.validateSsoToken(token);
+  assert.strictEqual(result.valid, false);
+  assert.match(result.error!, /requires trustedWebauthnKey/);
 });
 
 test("WebAuthn SSO: trustedWebauthnKey rejects a token whose self-declared key does not match the registered credential", async () => {
@@ -137,9 +184,9 @@ test("WebAuthn SSO: trustedWebauthnKey rejects a token whose self-declared key d
   const attackerKeyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const forgedToken = await buildWebauthnSsoToken(ssoHandler, ssoReq, "bob", attackerKeyPair, "victims-credential-id");
 
-  // Without a trusted key, the forged token validates on its own (self-declared) terms.
+  // Without a trusted key there is nothing to compare against, so validation fails closed.
   const untrusted = await ssoHandler.validateSsoToken(forgedToken);
-  assert.strictEqual(untrusted.valid, true);
+  assert.strictEqual(untrusted.valid, false);
 
   // The relying instance pins the public key it saw on the victim's real first login,
   // which differs from the attacker's key -> must be rejected.

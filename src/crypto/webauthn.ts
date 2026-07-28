@@ -235,7 +235,8 @@ function rsaModulusExponentToSpkiPem(n: Uint8Array, e: Uint8Array): string {
 /**
  * @llm-summary Parses WebAuthn registration response (attestation) from navigator.credentials.create().
  * @llm-context Called by portal after user creates passkey. Extracts credential ID, public key (COSE→SPKI), and attestation.
- * The publicKeyPem is used for MasterKeySource creation and signature verification.
+ * The publicKeyPem is used for MasterKeySource creation and signature verification only — it is public,
+ * so it is never key-derivation material. Identity derivation uses the PRF secret (see deriveApSeed).
  */
 export function parseRegistrationResponse(response: PublicKeyCredential): ParsedRegistrationResponse {
   const attestationResponse = response.response as AuthenticatorAttestationResponse;

@@ -156,14 +156,20 @@
 
                 <!-- Security Assurance -->
                 <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10 text-xs space-y-1">
-                    <span class="font-semibold text-anthro-dark block font-mono uppercase text-[10px] tracking-wider">Zero-Knowledge Guarantee</span>
+                    <span class="font-semibold text-anthro-dark block font-mono uppercase text-[10px] tracking-wider">Cosa riceve l'istanza</span>
                     <p class="text-anthro-muted leading-relaxed">
-                        L'istanza riceve esclusivamente una firma temporanea. Nessuna password o chiave privata lascia il tuo browser.
+                        La tua chiave master non lascia mai questo browser. L'istanza riceve una firma temporanea
+                        e la chiave ActivityPub derivata <span class="font-mono">solo per questo dominio</span>,
+                        che le serve per firmare le tue attività federate: potrà agire come te su
+                        <span id="ssoScopeDomain" class="font-mono">questa istanza</span>, e solo lì.
+                        La tua identità sulle altre istanze resta inaccessibile.
                     </p>
                 </div>
 
+                <div id="ssoRequestError" class="hidden p-4 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800 leading-relaxed font-mono" role="alert"></div>
+
                 <!-- Actions -->
-                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <div id="ssoActions" class="flex flex-col sm:flex-row gap-3 pt-4">
                     <button id="ssoAuthorizeBtn" class="btn-anthro flex-1 text-sm justify-between">
                         <span>Authorize Access</span>
                         <span class="font-mono">→</span>
@@ -173,7 +179,7 @@
                     </button>
                 </div>
 
-                <div class="pt-4 border-t border-anthro-dark/10 space-y-2">
+                <div id="ssoPasskeyActions" class="pt-4 border-t border-anthro-dark/10 space-y-2">
                     <label class="block text-[10px] font-mono uppercase text-anthro-muted">Oppure accedi con Passkey</label>
                     <div class="flex gap-2">
                         <input type="text" id="ssoPasskeyUserInput" placeholder="username passkey" class="flex-1 px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
@@ -500,6 +506,7 @@
     <!-- Core FID Web Script -->
     <script type="module">
         import Zen from './vendor/zen.min.js';
+        import { resolveRedirectUri } from './dist/src/sso/redirect.js';
         window.Zen = Zen;
 
         // State
@@ -870,36 +877,70 @@
         }
 
         // SSO Authorize Flow (Mode A)
+
+        // Validated SSO request. Stays null until checkSsoQueryParams accepts the
+        // query params; every authorize/cancel path reads it instead of re-parsing
+        // the URL, so an unvalidated redirectUri can never reach window.location.
+        let ssoRequest = null;
+
+        // resolveRedirectUri lives in src/sso/redirect.ts so the portal and any
+        // relying instance enforce the exact same rule from one tested source.
+
+        function showSsoRequestError(message) {
+            const box = document.getElementById("ssoRequestError");
+            if (box) {
+                box.textContent = message;
+                box.classList.remove("hidden");
+            }
+            document.getElementById("ssoActions")?.classList.add("hidden");
+            document.getElementById("ssoPasskeyActions")?.classList.add("hidden");
+        }
+
         async function checkSsoQueryParams() {
             const urlParams = new URLSearchParams(window.location.search);
             const clientId = urlParams.get('clientId');
             const redirectUri = urlParams.get('redirectUri');
             const instanceDomain = urlParams.get('instanceDomain');
 
-            if (clientId || redirectUri || instanceDomain) {
-                document.getElementById("ssoFlowSection")?.classList.remove("hidden");
-                document.getElementById("dashboardSection")?.classList.add("hidden");
+            if (!clientId && !redirectUri && !instanceDomain) return;
 
-                const clientEl = document.getElementById("ssoClientId");
-                const domainEl = document.getElementById("ssoInstanceDomain");
-                const aliasEl = document.getElementById("ssoUserAlias");
-                const pubEl = document.getElementById("ssoZenPubKey");
+            document.getElementById("ssoFlowSection")?.classList.remove("hidden");
+            document.getElementById("dashboardSection")?.classList.add("hidden");
 
-                if (clientEl) clientEl.textContent = clientId || "unknown-app";
-                if (domainEl) domainEl.textContent = instanceDomain || window.location.hostname;
-                if (aliasEl) aliasEl.textContent = `@${currentAlias}`;
-                if (pubEl) pubEl.textContent = currentKeys.pub;
+            const clientEl = document.getElementById("ssoClientId");
+            const domainEl = document.getElementById("ssoInstanceDomain");
+            const aliasEl = document.getElementById("ssoUserAlias");
+            const pubEl = document.getElementById("ssoZenPubKey");
 
-                const pkUserEl = document.getElementById("ssoPasskeyUserInput");
-                if (pkUserEl && currentAlias !== "anonymous") pkUserEl.value = currentAlias;
+            if (clientEl) clientEl.textContent = clientId || "unknown-app";
+            if (domainEl) domainEl.textContent = instanceDomain || "-";
+            const scopeEl = document.getElementById("ssoScopeDomain");
+            if (scopeEl) scopeEl.textContent = instanceDomain || "questa istanza";
+            if (aliasEl) aliasEl.textContent = `@${currentAlias}`;
+            if (pubEl) pubEl.textContent = currentKeys.pub;
+
+            const validRedirectUri = resolveRedirectUri(redirectUri, instanceDomain);
+            if (!clientId || !instanceDomain || !validRedirectUri) {
+                showSsoRequestError(
+                    "Richiesta SSO rifiutata: clientId, instanceDomain e redirectUri sono obbligatori, " +
+                    "e redirectUri deve puntare in HTTPS allo stesso dominio di instanceDomain " +
+                    `(ricevuto: ${redirectUri || "nessuno"} per ${instanceDomain || "nessun dominio"}).`
+                );
+                return;
             }
+
+            ssoRequest = { clientId, instanceDomain, redirectUri: validRedirectUri };
+
+            const pkUserEl = document.getElementById("ssoPasskeyUserInput");
+            if (pkUserEl && currentAlias !== "anonymous") pkUserEl.value = currentAlias;
         }
 
         async function handleSsoAuthorize() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const clientId = urlParams.get('clientId') || 'tunecamp-instance';
-            const redirectUri = urlParams.get('redirectUri') || window.location.origin;
-            const instanceDomain = urlParams.get('instanceDomain') || window.location.hostname;
+            if (!ssoRequest) {
+                showSsoRequestError("Richiesta SSO non valida: autorizzazione annullata.");
+                return;
+            }
+            const { clientId, instanceDomain, redirectUri } = ssoRequest;
 
             const username = currentAlias !== "anonymous" ? currentAlias : "user_" + currentKeys.pub.substring(6, 12);
             const apSeed = await computePbkdf2Bits(currentKeys.priv, `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`);
@@ -921,19 +962,58 @@
                 actorUri: `https://${instanceDomain}/users/${username}`,
                 issuedAt,
                 nonce,
-                signature
+                signature,
+                masterKeySource: { type: 'zen', pubKey: currentKeys.pub }
             };
 
-            const payload = { ssoToken, apSeed };
-            const callbackHash = `#payload=${encodeURIComponent(JSON.stringify(payload))}`;
-            window.location.href = redirectUri + callbackHash;
+            await deliverSsoPayload(instanceDomain, redirectUri, ssoToken, apSeed);
+        }
+
+        /**
+         * Hands the SSO token and the derived ActivityPub seed to the target instance over a
+         * direct POST, then sends the user back with nothing but a one-time code.
+         *
+         * The seed is the ActivityPub private key for that domain: the instance needs it, but
+         * putting it in the URL fragment left it in the back button, in session restore and in
+         * anything that reads location. The code is single-use and short-lived, and the portal
+         * never receives a session for the instance.
+         */
+        async function deliverSsoPayload(instanceDomain, redirectUri, ssoToken, apSeed) {
+            let data;
+            try {
+                const response = await fetch(`https://${instanceDomain}/api/auth/zen/sso`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ssoToken, apSeed, mode: "code" })
+                });
+                data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    showSsoRequestError(`L'istanza ha rifiutato l'accesso: ${data.error || response.status}`);
+                    return;
+                }
+            } catch (err) {
+                showSsoRequestError(`Impossibile contattare ${instanceDomain}: ${err.message}`);
+                return;
+            }
+
+            // No code means the instance is too old for this flow. Falling back to the URL
+            // would put the ActivityPub key back in the address bar, so refuse instead.
+            if (!data.code) {
+                showSsoRequestError(
+                    `${instanceDomain} non supporta lo scambio tramite codice monouso ` +
+                    "(richiede tunecamp-instance 3.12.0 o superiore). Accesso interrotto."
+                );
+                return;
+            }
+
+            const target = new URL(redirectUri);
+            target.searchParams.set("fid_code", data.code);
+            window.location.href = target.href;
         }
 
         function handleSsoCancel() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectUri = urlParams.get('redirectUri');
-            if (redirectUri) {
-                window.location.href = redirectUri + "#error=user_cancelled";
+            if (ssoRequest) {
+                window.location.href = ssoRequest.redirectUri + "#error=user_cancelled";
             } else {
                 document.getElementById("ssoFlowSection")?.classList.add("hidden");
                 document.getElementById("dashboardSection")?.classList.remove("hidden");
@@ -1054,30 +1134,33 @@
                             authenticatorAttachment: 'platform',
                             userVerification: 'required'
                         },
+                        // The PRF extension is what makes a passkey usable as a master key: it yields a
+                        // per-credential secret that never leaves the authenticator. Without it the only
+                        // credential-bound material we could derive from is the public key, which ships
+                        // inside every SSO token and is therefore no secret at all.
+                        extensions: { prf: {} },
                         timeout: 60000
                     };
 
                     const credential = await navigator.credentials.create({ publicKey });
 
-                    const { cryptoKey, rawKeyBytes } = await extractCosePublicKey(credential);
+                    const prfEnabled = credential.getClientExtensionResults?.().prf?.enabled;
+                    if (!prfEnabled) {
+                        throw new Error(
+                            "Questo autenticatore non supporta l'estensione PRF, richiesta per derivare " +
+                            "un'identità ActivityPub dalla passkey. Usa un autenticatore compatibile " +
+                            "(browser aggiornato, o chiave hardware con hmac-secret) oppure accedi con Zen SEA."
+                        );
+                    }
+
+                    const { cryptoKey } = await extractCosePublicKey(credential);
                     const spki = await crypto.subtle.exportKey('spki', cryptoKey);
                     const pubKeyPem = '-----BEGIN PUBLIC KEY-----\n' + btoa(String.fromCharCode(...new Uint8Array(spki))).match(/.{1,64}/g).join('\n') + '\n-----END PUBLIC KEY-----';
                     pkPublicKeyPem = pubKeyPem;
 
                     // Store in IndexedDB (rawId is the ArrayBuffer form; .id is a base64url string, not usable as raw bytes).
-                    // spki bytes are kept so a later login can re-derive the same apSeed the server computes
-                    // from publicKeyPem (deriveApSeed exports SPKI DER from the PEM and uses it as raw PBKDF2 input).
+                    // spki bytes are kept only for assertion-signature verification, never as seed material.
                     await storePasskeyCredential(rpId, username, credential.rawId, pubKeyPem, new Uint8Array(spki));
-
-                    // Derive AP keypair from passkey. Uses the actual extracted public key bytes (stable,
-                    // tied to this credential) rather than a meaningless tail-slice of attestation authData.
-                    const apSeed = 'fid:activitypub:' + rpId + ':' + username;
-                    const seedBuf = new TextEncoder().encode(apSeed);
-                    const derivedKey = await crypto.subtle.deriveBits(
-                        { name: 'PBKDF2', salt: seedBuf, iterations: 100000, hash: 'SHA-256' },
-                        await crypto.subtle.importKey('raw', rawKeyBytes, 'PBKDF2', false, ['deriveBits']),
-                        256
-                    );
 
                     // Show result
                     const infoDiv = document.getElementById('passkeyInfo');
@@ -1234,37 +1317,51 @@
                     return;
                 }
 
+                if (!ssoRequest) {
+                    showSsoRequestError("Richiesta SSO non valida: autorizzazione annullata.");
+                    return;
+                }
+                const { clientId, instanceDomain, redirectUri } = ssoRequest;
+
                 if (btn) btn.disabled = true;
                 try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const clientId = urlParams.get('clientId') || 'tunecamp-instance';
-                    const redirectUri = urlParams.get('redirectUri') || window.location.origin;
-                    const instanceDomain = urlParams.get('instanceDomain') || window.location.hostname;
-
                     const credentialIdB64 = base64url(new Uint8Array(stored.credentialId));
                     const issuedAt = Date.now();
                     const nonce = crypto.randomUUID().replace(/-/g, '');
                     const tokenPayload = `${clientId}:${instanceDomain}:${username}:${credentialIdB64}:${issuedAt}:${nonce}`;
                     const challenge = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tokenPayload)));
 
+                    const derivationSalt = `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`;
+
+                    // Same ceremony does double duty: it signs the SSO token payload, and its PRF
+                    // evaluation returns the per-credential secret we derive the ActivityPub identity
+                    // from. The PRF input is the derivation salt, so each (instance, user) pair gets a
+                    // distinct secret and the authenticator never releases anything reusable elsewhere.
                     const assertion = await navigator.credentials.get({
                         publicKey: {
                             challenge,
                             rpId,
                             allowCredentials: [{ type: 'public-key', id: stored.credentialId }],
                             userVerification: 'required',
+                            extensions: { prf: { eval: { first: new TextEncoder().encode(derivationSalt) } } },
                             timeout: 60000
                         }
                     });
+
+                    const prfOutput = assertion.getClientExtensionResults?.().prf?.results?.first;
+                    if (!prfOutput) {
+                        throw new Error(
+                            "L'autenticatore non ha restituito un valore PRF: impossibile derivare l'identità " +
+                            "ActivityPub da questa passkey. Ricrea la passkey su un autenticatore che supporta PRF, " +
+                            "oppure accedi con Zen SEA."
+                        );
+                    }
 
                     const authenticatorData = base64url(new Uint8Array(assertion.response.authenticatorData));
                     const clientDataJSON = base64url(new Uint8Array(assertion.response.clientDataJSON));
                     const signature = base64url(new Uint8Array(assertion.response.signature));
 
-                    const apSeed = await computePbkdf2BitsFromBytes(
-                        new Uint8Array(stored.spkiBytes),
-                        `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`
-                    );
+                    const apSeed = await computePbkdf2BitsFromBytes(new Uint8Array(prfOutput), derivationSalt);
 
                     const ssoToken = {
                         clientId,
@@ -1283,9 +1380,7 @@
                         webauthnAssertion: { authenticatorData, clientDataJSON }
                     };
 
-                    const payload = { ssoToken, apSeed };
-                    const callbackHash = `#payload=${encodeURIComponent(JSON.stringify(payload))}`;
-                    window.location.href = redirectUri + callbackHash;
+                    await deliverSsoPayload(instanceDomain, redirectUri, ssoToken, apSeed);
                 } catch (err) {
                     console.error('[FID] Passkey SSO authorization failed:', err);
                     alert('Autorizzazione con passkey fallita: ' + err.message);

@@ -1,4 +1,4 @@
-import type { MasterKeySource, DerivedApIdentity } from "../types.js";
+import type { MasterKeySource, PublicMasterKeySource, DerivedApIdentity } from "../types.js";
 import { deriveApIdentity, deriveApSeed, seedToEd25519Pem } from "./derivation.js";
 
 /**
@@ -15,13 +15,16 @@ export function createZenMasterKeySource(privKey: string, pubKey: string): Maste
  * @llm-context Used when user registers a passkey (FaceID, TouchID, Windows Hello, YubiKey).
  * The credentialId identifies the credential; publicKeyPem is the SPKI PEM for verification.
  * The raw CryptoKey is kept for WebAuthn assertion operations (signing).
+ * @llm-edge-cases prfSecret is optional because verification only needs the public half, but
+ * deriveApSeed throws without it — pass it whenever the source is used to derive an identity.
  */
 export function createWebAuthnMasterKeySource(
   credentialId: string,
   publicKey: CryptoKey,
-  publicKeyPem: string
+  publicKeyPem: string,
+  prfSecret?: Uint8Array
 ): MasterKeySource {
-  return { type: 'webauthn', credentialId, publicKey, publicKeyPem };
+  return { type: 'webauthn', credentialId, publicKey, publicKeyPem, prfSecret };
 }
 
 /**
@@ -60,4 +63,17 @@ export function getMasterKeyIdentifier(source: MasterKeySource): string {
  */
 export function getVerificationKey(source: MasterKeySource): string {
   return source.type === 'zen' ? source.pubKey : source.publicKeyPem;
+}
+
+/**
+ * @llm-summary Strips the secret half off a MasterKeySource so it can be embedded in an SSO token.
+ * @llm-context A Zen MasterKeySource holds `privKey`; serialising it into a token would hand the user's
+ * master private key to every relying app. Call this before putting a source on the wire.
+ * @llm-edge-cases The WebAuthn `publicKey` CryptoKey is dropped too — it is not serialisable and
+ * `publicKeyPem` already carries the same material.
+ */
+export function toPublicMasterKeySource(source: MasterKeySource): PublicMasterKeySource {
+  return source.type === 'zen'
+    ? { type: 'zen', pubKey: source.pubKey }
+    : { type: 'webauthn', credentialId: source.credentialId, publicKeyPem: source.publicKeyPem };
 }

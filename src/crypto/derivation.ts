@@ -12,8 +12,13 @@ const HASH_ALGO = "sha256";
  * @llm-summary Derives a 32-byte deterministic seed from a master key source using PBKDF2.
  * @llm-context Used by deriveApIdentity to produce the same seed regardless of master key source (Zen SEA or WebAuthn).
  * The salt format is fixed: `fid:activitypub:${instanceDomain}:${username}` (lowercased).
- * @llm-edge-cases For WebAuthn, the publicKey must be exportable (raw). If not exportable, derivation will fail.
+ * The Zen private key is used as PBKDF2 password in its UTF-8 string form — NOT hex-decoded. Zen SEA keys
+ * are base64url, so hex-decoding them yielded a 0-byte secret and collapsed every user on a domain onto
+ * one identity. UTF-8 is also what the browser portal feeds to `crypto.subtle`, so both sides now agree.
+ * @llm-edge-cases Throws on an empty Zen private key rather than deriving from an empty password.
+ * For WebAuthn, the publicKey must be exportable (raw). If not exportable, derivation will fail.
  * @llm-faq Q: Why same PBKDF2 params for both sources? A: Determinism — same (domain, username) + same master secret = same seed = same Ed25519 keys.
+ * Q: Can I change the password encoding later? A: Not without re-keying every existing identity; `tests/derivation.test.ts` pins a known-answer vector to make any change fail loudly.
  */
 export function deriveApSeed(
   source: MasterKeySource,
@@ -21,22 +26,28 @@ export function deriveApSeed(
   username: string
 ): Uint8Array {
   const salt = `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`;
-  
+
   let masterSecret: Uint8Array;
-  
+
   if (source.type === 'zen') {
-    // Zen SEA: privKey is hex-encoded secp256k1 private key (32 bytes)
-    masterSecret = Buffer.from(source.privKey, 'hex');
-  } else {
-    // WebAuthn: export raw public key material (ECDSA P-256 or RSA)
-    // Note: This is a sync approximation; real implementation needs crypto.subtle.exportKey('raw', publicKey)
-    // For Node.js crypto compatibility, we expect publicKeyPem to be provided and parse it.
-    if (!source.publicKeyPem) {
-      throw new Error('WebAuthn source requires publicKeyPem for seed derivation');
+    // Zen SEA: privKey is a base64url secp256k1 private key, used as a UTF-8 password.
+    if (!source.privKey) {
+      throw new Error('Zen source requires a non-empty privKey for seed derivation');
     }
-    const publicKeyObj = crypto.createPublicKey({ key: source.publicKeyPem, format: 'pem' });
-    const raw = publicKeyObj.export({ type: 'spki', format: 'der' });
-    masterSecret = new Uint8Array(raw);
+    masterSecret = Buffer.from(source.privKey, 'utf8');
+  } else {
+    // WebAuthn: the master secret is the PRF extension output for this credential.
+    // It must never be the public key: publicKeyPem travels inside every SSO token, so
+    // deriving from it would let any relying instance (or anyone who saw one token)
+    // reconstruct the user's ActivityPub private key on every other domain.
+    if (!source.prfSecret || source.prfSecret.length === 0) {
+      throw new Error(
+        'WebAuthn source requires prfSecret (WebAuthn PRF extension output) for seed derivation. ' +
+        'It is obtained in the browser via navigator.credentials.get({ extensions: { prf: { eval: ... } } }) ' +
+        'and is not available server-side.'
+      );
+    }
+    masterSecret = source.prfSecret;
   }
   
   // PBKDF2 deterministic derivation
