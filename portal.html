@@ -1563,31 +1563,32 @@
                 }
 
                 try {
-                    // Step 1: Fetch a server-generated challenge nonce from the instance
+                    // Step 1: Fetch a server-generated challenge nonce from the instance.
+                    // The portal has no session there, so it identifies the account by the
+                    // zen_pub already linked to it — the same lookup /link performs.
                     const challengeRes = await fetch(
-                        `https://${instanceDomain}/api/auth/zen/challenge?username=${encodeURIComponent(currentAlias.toLowerCase())}&instanceDomain=${encodeURIComponent(instanceDomain.toLowerCase())}`
+                        `https://${instanceDomain}/api/auth/zen/challenge?zenPubKey=${encodeURIComponent(currentKeys.pub)}`
                     );
                     if (!challengeRes.ok) {
                         const err = await challengeRes.json().catch(() => ({ error: 'Unknown error' }));
                         throw new Error(err.error || `HTTP ${challengeRes.status}`);
                     }
-                    const challenge = await challengeRes.json();
-                    const nonce = challenge.nonce;
+                    const { challenge } = await challengeRes.json();
+                    if (!challenge?.nonce) throw new Error('Instance returned no challenge');
 
-                    // Step 2: Sign the challenge key with Zen SEA private key
-                    const challengeKey = `${currentAlias.toLowerCase()}:${nonce}`;
-                    const signature = await zenSign(challengeKey, currentKeys.priv);
+                    // Step 2: Sign the challenge key with the Zen SEA private key. The instance
+                    // verifies `${username}:${nonce}` using the username *it* resolved from
+                    // zen_pub, which may be an alias — so sign what it sent back, not currentAlias.
+                    const signature = await zenSign(`${challenge.username}:${challenge.nonce}`, currentKeys.priv);
 
                     // Step 3: Submit the signed challenge to get the Instance Passport
                     const response = await fetch(`https://${instanceDomain}/api/auth/zen/link`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            username: currentAlias.toLowerCase(),
-                            instanceDomain: instanceDomain.toLowerCase(),
-                            nonce,
-                            signature,
-                            zenPubKey: currentKeys.pub
+                            zenPubKey: currentKeys.pub,
+                            challenge,
+                            seaSignature: signature
                         })
                     });
 

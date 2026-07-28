@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.2.1] - 2026-07-28
+
+### Fixed
+
+- **"Add to Registry" sent a request no instance could answer.** Three separate faults stacked up: it asked `/api/auth/zen/challenge` for `?username=`, an endpoint that never read that parameter and required a session the portal does not have; it read the nonce off the response root instead of `challenge.nonce`; and it POSTed `{ username, instanceDomain, nonce, signature, zenPubKey }` to `/link`, which expects `{ zenPubKey, challenge, seaSignature }` — so `challenge` and `seaSignature` arrived undefined and the call 400'd whenever it got past CORS at all. The portal now sends `?zenPubKey=` and posts the shape `/link` documents.
+- **The signed payload used the wrong username.** The portal signed `${currentAlias}:${nonce}`, but the instance verifies against the username it resolved from `zen_pub` — an alias, when the account has one. It now signs `${challenge.username}:${challenge.nonce}`, echoing back what the instance itself issued.
+
+### Notes
+
+- Requires tunecamp-instance ≥ 3.13.0 **deployed**, which is what opens `/challenge` to the portal's cross-origin, session-less request.
+
 ## [3.2.0] - 2026-07-28
 
 ### Fixed
