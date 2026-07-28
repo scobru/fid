@@ -521,6 +521,32 @@
         let wsRelay = null;
         const RELAY_URL = "wss://delay.scobrudot.dev/zen";
 
+        // A passkey identity is tracked separately from the Zen SEA one: currentKeys holds a
+        // keypair whose private half the dashboard can display and sign with, and a passkey has
+        // no such half — the private key never leaves the authenticator. Keeping them apart
+        // stops passkey state from being mistaken for something signable.
+        let passkeySession = null;
+
+        function loadPasskeySession() {
+            try {
+                const raw = localStorage.getItem("fid_passkey_session");
+                passkeySession = raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                passkeySession = null;
+            }
+        }
+
+        function setPasskeySession(alias, credentialIdB64, rpId) {
+            passkeySession = { alias, credentialIdB64, rpId };
+            localStorage.setItem("fid_passkey_session", JSON.stringify(passkeySession));
+            updateDashboardUI();
+        }
+
+        // The alias to act as, whichever identity the user actually signed in with.
+        function activeAlias() {
+            return currentAlias !== "anonymous" ? currentAlias : (passkeySession?.alias || "anonymous");
+        }
+
         // Toast Helper
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -614,6 +640,8 @@
 
         // Session Persistence
         async function initOrLoadSession() {
+            loadPasskeySession();
+
             const savedAlias = localStorage.getItem("fid_user_alias");
             const savedPriv = localStorage.getItem("fid_master_priv_key");
             const savedPub = localStorage.getItem("fid_zen_pub_key");
@@ -688,7 +716,13 @@
             const privInput = document.getElementById("dashMasterPrivKey");
             const userIn = document.getElementById("userInput");
 
-            if (badge) badge.textContent = `@${currentAlias}`;
+            // With no Zen login the badge would read @anonymous even right after the user
+            // created or re-linked a passkey, which reads as "nothing happened".
+            if (badge) {
+                badge.textContent = currentAlias === "anonymous" && passkeySession
+                    ? `@${passkeySession.alias} · passkey`
+                    : `@${currentAlias}`;
+            }
             if (pubInput) pubInput.value = currentKeys.pub;
             if (privInput) privInput.value = currentKeys.priv;
             if (userIn) userIn.value = currentAlias !== "anonymous" ? currentAlias : "";
@@ -938,7 +972,7 @@
             ssoRequest = { clientId, instanceDomain, redirectUri: validRedirectUri };
 
             const pkUserEl = document.getElementById("ssoPasskeyUserInput");
-            if (pkUserEl && currentAlias !== "anonymous") pkUserEl.value = currentAlias;
+            if (pkUserEl && activeAlias() !== "anonymous") pkUserEl.value = activeAlias();
         }
 
         async function handleSsoAuthorize() {
@@ -1175,6 +1209,7 @@
                     // Store in IndexedDB (rawId is the ArrayBuffer form; .id is a base64url string, not usable as raw bytes).
                     // spki bytes are kept only for assertion-signature verification, never as seed material.
                     await storePasskeyCredential(rpId, username, credential.rawId, pubKeyPem, new Uint8Array(spki));
+                    setPasskeySession(username, base64url(new Uint8Array(credential.rawId)), rpId);
 
                     // Show result
                     const infoDiv = document.getElementById('passkeyInfo');
@@ -1367,11 +1402,14 @@
                         return;
                     }
 
+                    const credentialIdB64 = base64url(new Uint8Array(cred.credentialId));
+                    setPasskeySession(username, credentialIdB64, rpId);
+
                     const infoDiv = document.getElementById('passkeyInfo');
                     if (infoDiv) {
                         infoDiv.classList.remove('hidden');
                         infoDiv.innerHTML = `<p class="font-semibold mb-1">Passkey ricollegata!</p>
-                            <p>Credential ID: <span class="break-all">${base64url(new Uint8Array(cred.credentialId))}</span></p>
+                            <p>Credential ID: <span class="break-all">${credentialIdB64}</span></p>
                             <p class="text-emerald-700 mt-1">Identità ActivityPub pronta per @${username} su ${rpId}</p>`;
                     }
                     showToast(existing ? 'Passkey già collegata su questo browser.' : 'Passkey ricollegata!');
@@ -1513,8 +1551,14 @@
                     return;
                 }
 
-                if (!currentKeys.priv) {
-                    alert('Devi prima autenticarti con Zen SEA o creare una passkey.');
+                // This flow signs the instance challenge with the Zen SEA private key, and
+                // /api/auth/zen/link verifies that signature. A passkey cannot produce one —
+                // its private key never leaves the authenticator — so the old wording ("o
+                // creare una passkey") promised a path that does not exist.
+                if (!currentKeys.priv || currentAlias === "anonymous") {
+                    alert(passkeySession
+                        ? 'Add to Registry richiede un\'identità Zen SEA. Con una passkey, collega l\'istanza tramite il flusso FID SSO.'
+                        : 'Devi prima autenticarti con Zen SEA.');
                     return;
                 }
 

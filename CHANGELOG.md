@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0] - 2026-07-28
+
+### Fixed
+
+- **A passkey was never an identity the portal recognised.** `currentAlias` / `currentKeys` are written only by the Zen SEA login, so creating or re-linking a passkey left the ACTIVE USER badge on `@anonymous` — the operation looked like it had done nothing — and left the SSO passkey username field unprefilled. A passkey session is now tracked separately in `fid_passkey_session` (deliberately not merged into `currentKeys`, which holds a private key the dashboard can display and sign with; a passkey has no such half).
+- **"Add to Registry" advertised a path that does not exist.** The guard read `Devi prima autenticarti con Zen SEA o creare una passkey`, but the flow signs the instance challenge with the Zen SEA private key and `/api/auth/zen/link` verifies that signature — a passkey cannot produce one. Passkey users are now told to link through the FID SSO flow instead. The guard also rejects the `anonymous` alias, which would otherwise be sent to the instance as a username.
+
 ## [3.1.0] - 2026-07-28
 
 ### Fixed
