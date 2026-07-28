@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.1.0] - 2026-07-28
+
+### Fixed
+
+- **Clearing site data locked users out of passkeys they still held.** The passkey lives in the authenticator/password manager and survives, but the `credentialId` → username record lives in IndexedDB, which "clear site data" wipes along with localStorage. The portal then refused with "Nessuna passkey trovata... Creala prima", pushing users to register a second identity. The SSO passkey flow now falls back to a discoverable-credential assertion (`navigator.credentials.get` with no `allowCredentials`) and rebuilds the record from `assertion.rawId`.
+- **Registration did not request a discoverable credential.** Without `residentKey: 'required'` the authenticator may only answer an explicit `allowCredentials` list, so a browser that lost its IndexedDB record could never find the passkey again. Also dropped `authenticatorAttachment: 'platform'`, which excluded cross-platform credential managers.
+
+### Added
+
+- **"Usa Passkey Esistente" button** in the portal's Passkey pane. Until now the pane only offered "Crea Passkey"; the authenticate path existed solely inside the SSO query-param flow (`ssoPasskeyActions`), so a user arriving at the portal directly had no way to re-link an existing passkey.
+- `discoverPasskeyCredential(rpId, username)` verifies the returned `userHandle` matches `${username}@${rpId}` before storing, so a credential belonging to another user is refused rather than bound to the typed username.
+
+### Notes
+
+- A recovered credential has no `publicKeyPem` — a WebAuthn assertion never returns one. This is fine for an identity the instance already pinned via trust-on-first-use (`fid_webauthn_credentials`); it verifies against the pinned copy. A credentialId the instance has **never** seen cannot be recovered this way and requires re-registering the passkey.
+
 ## [3.0.0] - 2026-07-28
 
 ### ⚠️ Breaking

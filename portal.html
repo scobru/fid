@@ -265,11 +265,17 @@
 
                             <div class="p-3 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs text-anthro-muted">
                                 <p class="font-medium mb-1">Crea una Passkey</p>
-                                <p>Usa FaceID, TouchID, Windows Hello o una security key (YubiKey). La passkey viene salvata nel tuo gestore credenziali (iCloud Keychain, Google Password Manager, 1Password, ecc.) e sincronizzata sui tuoi dispositivi.</                            </p>
+                                <p>Usa FaceID, TouchID, Windows Hello o una security key (YubiKey). La passkey viene salvata nel tuo gestore credenziali (iCloud Keychain, Google Password Manager, Proton Pass, 1Password, ecc.) e sincronizzata sui tuoi dispositivi.</p>
+                                <p class="mt-1">Se hai gia&#768; una passkey ma hai cancellato i dati del sito, usa <span class="font-mono">Usa Passkey Esistente</span>: la chiave e&#768; rimasta nel gestore credenziali, qui va solo ricollegata.</p>
                             </div>
 
                             <button id="createPasskeyBtn" class="w-full btn-anthro text-xs" disabled>
                                 <span><i class="fa-solid fa-fingerprint mr-2"></i>Crea Passkey</span>
+                                <span class="font-mono">→</span>
+                            </button>
+
+                            <button id="usePasskeyBtn" class="w-full btn-anthro text-xs" disabled>
+                                <span><i class="fa-solid fa-rotate-left mr-2"></i>Usa Passkey Esistente</span>
                                 <span class="font-mono">→</span>
                             </button>
 
@@ -1092,19 +1098,23 @@
 
             async function checkPasskeyAvailability() {
                 const btn = document.getElementById('createPasskeyBtn');
+                const useBtn = document.getElementById('usePasskeyBtn');
                 if (!btn) return;
                 if (!window.PublicKeyCredential) {
                     btn.disabled = true;
+                    if (useBtn) useBtn.disabled = true;
                     btn.querySelector('span').innerHTML = '<i class="fa-solid fa-lock mr-2"></i>Non Supportato';
                     return;
                 }
                 const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
                 if (!available) {
                     btn.disabled = true;
+                    if (useBtn) useBtn.disabled = true;
                     btn.querySelector('span').innerHTML = '<i class="fa-solid fa-lock mr-2"></i>No Authenticator';
                     return;
                 }
                 btn.disabled = false;
+                if (useBtn) useBtn.disabled = false;
                 btn.querySelector('span').innerHTML = '<i class="fa-solid fa-fingerprint mr-2"></i>Crea Passkey';
             }
 
@@ -1131,7 +1141,11 @@
                             { type: 'public-key', alg: -257 }
                         ],
                         authenticatorSelection: {
-                            authenticatorAttachment: 'platform',
+                            // Discoverable (resident) credential: without it the authenticator
+                            // can only answer with an explicit allowCredentials list, so a browser
+                            // that lost its IndexedDB record could never find the passkey again.
+                            residentKey: 'required',
+                            requireResidentKey: true,
                             userVerification: 'required'
                         },
                         // The PRF extension is what makes a passkey usable as a master key: it yields a
@@ -1298,6 +1312,77 @@
                 });
             }
 
+            // The passkey itself lives in the authenticator / password manager and survives
+            // "clear site data"; what does not survive is the credentialId -> username record
+            // in IndexedDB. A discoverable-credential assertion (no allowCredentials) asks the
+            // authenticator which passkeys it holds for this rpId and rebuilds that record,
+            // so the user recovers instead of being told to register a second identity.
+            async function discoverPasskeyCredential(rpId, username) {
+                const assertion = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: crypto.getRandomValues(new Uint8Array(32)),
+                        rpId,
+                        userVerification: 'required',
+                        timeout: 60000
+                    }
+                });
+                if (!assertion?.rawId) return null;
+
+                // Registration set user.id to `${username}@${rpId}`. If the authenticator hands
+                // back a different user's credential, refuse rather than binding this username
+                // to a credentialId that is not theirs.
+                const handle = assertion.response.userHandle;
+                if (handle) {
+                    const decoded = new TextDecoder().decode(new Uint8Array(handle));
+                    if (decoded !== username + '@' + rpId) {
+                        throw new Error(`La passkey selezionata appartiene a "${decoded.split('@')[0]}", non a "${username}".`);
+                    }
+                }
+
+                // An assertion carries no public key, so publicKeyPem stays empty here. That is
+                // fine for an identity the instance has already seen: it pinned the key to this
+                // credentialId on first login and verifies against the pinned copy from then on.
+                const credentialId = new Uint8Array(assertion.rawId);
+                await storePasskeyCredential(rpId, username, credentialId, '', null);
+                return { credentialId, publicKeyPem: '', recovered: true };
+            }
+
+            // "Usa Passkey Esistente": re-link a passkey the credential manager still holds
+            // after the browser's local record was wiped.
+            async function handlePasskeyRecovery() {
+                const username = document.getElementById('pkUserInput')?.value.trim();
+                if (!username) {
+                    alert('Inserisci lo username associato alla tua passkey.');
+                    return;
+                }
+
+                const btn = document.getElementById('usePasskeyBtn');
+                if (btn) btn.disabled = true;
+                try {
+                    const rpId = window.location.hostname || 'fid-portal.vercel.app';
+                    const existing = await loadPasskeyCredential(rpId, username);
+                    const cred = existing || await discoverPasskeyCredential(rpId, username);
+                    if (!cred) {
+                        alert(`Nessuna passkey trovata per @${username} su ${rpId}.`);
+                        return;
+                    }
+
+                    const infoDiv = document.getElementById('passkeyInfo');
+                    if (infoDiv) {
+                        infoDiv.classList.remove('hidden');
+                        infoDiv.innerHTML = `<p class="font-semibold mb-1">Passkey ricollegata!</p>
+                            <p>Credential ID: <span class="break-all">${base64url(new Uint8Array(cred.credentialId))}</span></p>
+                            <p class="text-emerald-700 mt-1">Identità ActivityPub pronta per @${username} su ${rpId}</p>`;
+                    }
+                    showToast(existing ? 'Passkey già collegata su questo browser.' : 'Passkey ricollegata!');
+                } catch (err) {
+                    console.error('[FID] Passkey recovery failed:', err);
+                    alert('Recupero passkey fallito: ' + err.message);
+                } finally {
+                    if (btn) btn.disabled = false;
+                }
+            }
+
             // SSO Authorize via real Passkey assertion (navigator.credentials.get). Builds a
             // FidSsoToken with masterKeySource.type === 'webauthn', signed by the authenticator
             // itself (challenge = SHA-256 of the exact token payload, binding the assertion to
@@ -1311,10 +1396,20 @@
                 }
 
                 const rpId = window.location.hostname || 'fid-portal.vercel.app';
-                const stored = await loadPasskeyCredential(rpId, username);
+                let stored = await loadPasskeyCredential(rpId, username);
                 if (!stored) {
-                    alert(`Nessuna passkey trovata per @${username} su questo dominio. Creala prima dal pannello Identity Creation.`);
-                    return;
+                    // No local record: the passkey may still exist in the credential manager,
+                    // so try discovery before sending the user back to registration.
+                    try {
+                        stored = await discoverPasskeyCredential(rpId, username);
+                    } catch (err) {
+                        alert('Recupero passkey fallito: ' + err.message);
+                        return;
+                    }
+                    if (!stored) {
+                        alert(`Nessuna passkey trovata per @${username} su questo dominio. Creala prima dal pannello Identity Creation.`);
+                        return;
+                    }
                 }
 
                 if (!ssoRequest) {
@@ -1380,6 +1475,13 @@
                         webauthnAssertion: { authenticatorData, clientDataJSON }
                     };
 
+                    if (!stored.publicKeyPem) {
+                        // Recovered credential: we have no local copy of the public key, so the
+                        // instance can only accept this token if it already pinned the key for
+                        // this credentialId on an earlier login.
+                        console.warn('[FID] SSO with recovered passkey: relying on the instance pinned public key.');
+                    }
+
                     await deliverSsoPayload(instanceDomain, redirectUri, ssoToken, apSeed);
                 } catch (err) {
                     console.error('[FID] Passkey SSO authorization failed:', err);
@@ -1392,6 +1494,7 @@
             document.getElementById('ssoAuthorizeWebauthnBtn')?.addEventListener('click', handleSsoAuthorizeWebauthn);
 
             document.getElementById('createPasskeyBtn')?.addEventListener('click', handlePasskeyRegistration);
+            document.getElementById('usePasskeyBtn')?.addEventListener('click', handlePasskeyRecovery);
 
             // FID Registry - Cross-Instance Linking
             document.getElementById('fidRegistryAddBtn')?.addEventListener('click', handleFidRegistryAdd);
