@@ -194,6 +194,7 @@
             <a href="#fid-registry-section" data-i18n="navLinking" class="hover:text-anthro-dark transition-colors">Instance Linking</a>
             <a href="#relay-section" data-i18n="navRelay" class="hover:text-anthro-dark transition-colors">P2P Network</a>
             <a href="#activitypub-section" data-i18n="navAp" class="hover:text-anthro-dark transition-colors">ActivityPub</a>
+            <a href="#tech-stack-section" data-i18n="navTech" class="hover:text-anthro-dark transition-colors">Stack & Flusso</a>
             <a href="#dev-docs-section" data-i18n="navDev" class="hover:text-anthro-dark transition-colors">Guida Dev</a>
         </nav>
 
@@ -550,6 +551,96 @@
 
                 <div class="bg-anthro-dark text-white rounded-xl p-5 font-mono text-sm overflow-x-auto" style="background-color: #1a1a1a;">
                     <pre id="ssoTokenJsonPreview" class="text-sm leading-relaxed whitespace-pre-wrap break-all text-emerald-300" data-i18n="ssoTokenPreviewPlaceholder">// Clicca "Aggiorna Payload" per generare il JSON live del FidSsoToken</pre>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SECTION: HOW IT WORKS & TECH STACK -->
+            <!-- ========================================== -->
+            <div id="tech-stack-section" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Card A: How it works (Come funziona) -->
+                <div class="anthro-card p-8 sm:p-10 space-y-6">
+                    <div class="space-y-2">
+                        <span data-i18n="howItWorksTag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">HOW IT WORKS</span>
+                        <h2 data-i18n="howItWorksTitle" class="font-serif text-3xl font-medium text-anthro-dark tracking-tight">
+                            Architettura e Flusso di Autenticazione
+                        </h2>
+                        <p data-i18n="howItWorksDesc" class="text-anthro-muted text-sm leading-relaxed">
+                            FID elimina la necessità di password memorizzate sui server centralizzati e riduce il rischio di phishing nel Fediverso attraverso un flusso crittografico a tre fasi.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-anthro-dark/10">
+                        <div class="flex gap-4">
+                            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-anthro-dark text-white font-mono text-xs flex items-center justify-center font-bold">1</span>
+                            <div>
+                                <h4 data-i18n="howItWorksStep1Title" class="font-mono text-xs uppercase font-bold text-anthro-dark mb-1">Identità Master Globale</h4>
+                                <p data-i18n="howItWorksStep1Desc" class="text-anthro-muted text-xs leading-relaxed">
+                                    L'utente sblocca la sua coppia di chiavi Zen SEA secp256k1 sul browser usando alias + passphrase. La chiave master non viene mai trasmessa via rete.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-anthro-dark text-white font-mono text-xs flex items-center justify-center font-bold">2</span>
+                            <div>
+                                <h4 data-i18n="howItWorksStep2Title" class="font-mono text-xs uppercase font-bold text-anthro-dark mb-1">Derivazione Isolata del Seed</h4>
+                                <p data-i18n="howItWorksStep2Desc" class="text-anthro-muted text-xs leading-relaxed">
+                                    Per ogni dominio di destinazione (es. un'istanza TuneCamp), il portale calcola un seed crittografico a 32 byte isolato, impedendo la tracciabilità tra diverse istanze.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-anthro-dark text-white font-mono text-xs flex items-center justify-center font-bold">3</span>
+                            <div>
+                                <h4 data-i18n="howItWorksStep3Title" class="font-mono text-xs uppercase font-bold text-anthro-dark mb-1">Firma del Token & Codice Monouso</h4>
+                                <p data-i18n="howItWorksStep3Desc" class="text-anthro-muted text-xs leading-relaxed">
+                                    Il portale firma a conoscenza zero il token SSO e invia il seed all'istanza via POST, che genera un codice di login monouso rimediabile in sicurezza dal browser.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card B: Tech Stack (Stack Tecnologico) -->
+                <div class="anthro-card p-8 sm:p-10 space-y-6">
+                    <div class="space-y-2">
+                        <span data-i18n="techStackTag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">TECHNOLOGY STACK</span>
+                        <h2 data-i18n="techStackTitle" class="font-serif text-3xl font-medium text-anthro-dark tracking-tight">
+                            Componenti Crittografiche e Standard
+                        </h2>
+                        <p data-i18n="techStackDesc" class="text-anthro-muted text-sm leading-relaxed">
+                            FID si basa su librerie crittografiche moderne ad alte prestazioni e standard W3C aperti per garantire la compatibilità con il Fediverse decentralizzato.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-anthro-dark/10">
+                        <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10">
+                            <span class="font-mono text-xs font-bold text-anthro-dark block mb-1">Zen SEA (secp256k1)</span>
+                            <p data-i18n="techStackZenDesc" class="text-anthro-muted text-xs leading-relaxed">
+                                Algoritmi SEA di GunDB per crittografia ellittica e firme asimmetriche direttamente sul browser.
+                            </p>
+                        </div>
+                        <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10">
+                            <span class="font-mono text-xs font-bold text-anthro-dark block mb-1">PBKDF2-SHA256</span>
+                            <p data-i18n="techStackPbkdf2Desc" class="text-anthro-muted text-xs leading-relaxed">
+                                Derivazione sicura delle chiavi con 10,000 iterazioni eseguite nativamente tramite Web Crypto API.
+                            </p>
+                        </div>
+                        <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10">
+                            <span class="font-mono text-xs font-bold text-anthro-dark block mb-1">Ed25519 (EdDSA)</span>
+                            <p data-i18n="techStackEdDesc" class="text-anthro-muted text-xs leading-relaxed">
+                                Generazione di chiavi identità ActivityPub (PEM) veloci e resistenti agli attacchi side-channel.
+                            </p>
+                        </div>
+                        <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10">
+                            <span class="font-mono text-xs font-bold text-anthro-dark block mb-1">ActivityPub & WebFinger</span>
+                            <p data-i18n="techStackApDesc" class="text-anthro-muted text-xs leading-relaxed">
+                                Standard del W3C per lo scambio di messaggi e la scoperta degli attori decentralizzati nel social web.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1658,6 +1749,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                     navLinking: "Instance Linking",
                     navRelay: "P2P Network",
                     navAp: "ActivityPub",
+                    navTech: "Stack & Flusso",
                     navDev: "Guida Dev",
                     heroTag: "SELF-SOVEREIGN IDENTITY PROTOCOL",
                     heroTitle: "Introducing Fediverse-ID 1.0",
@@ -1710,6 +1802,22 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                     inspectorTitle: "FidSsoToken Payload Structure",
                     btnUpdatePayload: "Aggiorna Payload",
                     ssoTokenPreviewPlaceholder: "// Clicca \"Aggiorna Payload\" per generare il JSON live del FidSsoToken",
+                    howItWorksTag: "COME FUNZIONA",
+                    howItWorksTitle: "Architettura e Flusso di Autenticazione",
+                    howItWorksDesc: "FID elimina la necessità di password memorizzate sui server centralizzati e riduce il rischio di phishing nel Fediverso attraverso un flusso crittografico a tre fasi.",
+                    howItWorksStep1Title: "Identità Master Globale",
+                    howItWorksStep1Desc: "L'utente sblocca la sua coppia di chiavi Zen SEA secp256k1 sul browser usando alias + passphrase. La chiave master non viene mai trasmessa via rete.",
+                    howItWorksStep2Title: "Derivazione Isolata del Seed",
+                    howItWorksStep2Desc: "Per ogni dominio di destinazione (es. un'istanza TuneCamp), il portale calcola un seed crittografico a 32 byte isolato, impedendo la tracciabilità tra diverse istanze.",
+                    howItWorksStep3Title: "Firma del Token & Codice Monouso",
+                    howItWorksStep3Desc: "Il portale firma a conoscenza zero il token SSO e invia il seed all'istanza via POST, che genera un codice di login monouso rimediabile in sicurezza dal browser.",
+                    techStackTag: "STACK TECNOLOGICO",
+                    techStackTitle: "Componenti Crittografiche e Standard",
+                    techStackDesc: "FID si basa su librerie crittografiche moderne ad alte prestazioni e standard W3C aperti per garantire la compatibilità con il Fediverse decentralizzato.",
+                    techStackZenDesc: "Algoritmi SEA di GunDB per crittografia ellittica e firme asimmetriche direttamente sul browser.",
+                    techStackPbkdf2Desc: "Derivazione sicura delle chiavi con 10,000 iterazioni eseguite nativamente tramite Web Crypto API.",
+                    techStackEdDesc: "Generazione di chiavi identità ActivityPub (PEM) veloci e resistenti agli attacchi side-channel.",
+                    techStackApDesc: "Standard del W3C per lo scambio di messaggi e la scoperta degli attori decentralizzati nel social web.",
                     devTag: "DEVELOPER INTEGRATION GUIDE",
                     devTitle: "Come Integrare FID nelle tue App Fediverso",
                     devDesc: "Guida completa con snippet di codice per implementare il protocollo Single Sign-On (SSO), la derivazione deterministica delle chiavi ActivityPub (Ed25519) e il sistema di collegamento tra istanze (Instance Passports).",
@@ -1738,6 +1846,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                     navLinking: "Instance Linking",
                     navRelay: "P2P Network",
                     navAp: "ActivityPub",
+                    navTech: "Stack & Flow",
                     navDev: "Dev Guide",
                     heroTag: "SELF-SOVEREIGN IDENTITY PROTOCOL",
                     heroTitle: "Introducing Fediverse-ID 1.0",
@@ -1790,6 +1899,22 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                     inspectorTitle: "FidSsoToken Payload Structure",
                     btnUpdatePayload: "Update Payload",
                     ssoTokenPreviewPlaceholder: "// Click \"Update Payload\" to generate the live JSON of the FidSsoToken",
+                    howItWorksTag: "HOW IT WORKS",
+                    howItWorksTitle: "Architecture & Auth Flow",
+                    howItWorksDesc: "FID eliminates the need for passwords stored on centralized servers and mitigates phishing risks in the Fediverse using a 3-step cryptographic flow.",
+                    howItWorksStep1Title: "Global Master Identity",
+                    howItWorksStep1Desc: "The user unlocks their Zen SEA secp256k1 keypair inside the browser using alias + passphrase. The master private key is never transmitted over the network.",
+                    howItWorksStep2Title: "Isolated Seed Derivation",
+                    howItWorksStep2Desc: "For each target domain (e.g. a TuneCamp instance), the portal derives an isolated 32-byte cryptographic seed, preventing tracking across instances.",
+                    howItWorksStep3Title: "Token Signature & One-Time Code",
+                    howItWorksStep3Desc: "The portal signs the SSO token via zero-knowledge and POSTs the seed to the instance, which generates a one-time login code redeemable safely by the browser.",
+                    techStackTag: "TECHNOLOGY STACK",
+                    techStackTitle: "Cryptographic Components & Standards",
+                    techStackDesc: "FID is built upon modern high-performance cryptographic libraries and open W3C standards to ensure compliance with the decentralized Fediverse.",
+                    techStackZenDesc: "GunDB's SEA algorithms for elliptic curve cryptography and asymmetric signatures directly inside the browser.",
+                    techStackPbkdf2Desc: "Secure key derivation with 10,000 iterations run natively via the Web Crypto API.",
+                    techStackEdDesc: "Fast and side-channel attack resistant generation of ActivityPub actor keys (PEM).",
+                    techStackApDesc: "W3C standards for federated messaging and decentralized actor discovery across the social web.",
                     devTag: "DEVELOPER INTEGRATION GUIDE",
                     devTitle: "How to Integrate FID in your Fediverse Apps",
                     devDesc: "Comprehensive guide with code snippets to implement Single Sign-On (SSO), deterministic ActivityPub Ed25519 key derivation, and cross-instance linking (Instance Passports).",
