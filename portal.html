@@ -178,44 +178,64 @@
 <body class="min-h-screen font-sans antialiased flex flex-col justify-between selection:bg-anthro-card selection:text-anthro-dark">
 
     <!-- Anthropic Minimalist Top Navigation Bar -->
-    <header class="px-6 lg:px-12 py-6 flex items-center justify-between border-b border-anthro-dark/10">
-        <div class="flex items-center gap-4">
-            <span class="font-serif text-2xl font-bold tracking-tight text-anthro-dark">FID</span>
-            <span class="text-anthro-dark/40 text-lg">|</span>
+    <header class="relative border-b border-anthro-dark/10">
+        <div class="px-6 lg:px-12 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="font-serif text-2xl font-bold tracking-tight text-anthro-dark">FID</span>
+                <span class="hidden sm:inline-block text-xs font-mono uppercase bg-anthro-dark/5 border border-anthro-dark/15 text-anthro-muted px-2 py-0.5 rounded-full font-semibold">SSO Portal</span>
+            </div>
+
+            <nav class="hidden lg:flex items-center gap-6 text-sm font-medium text-anthro-muted">
+                <a href="#identity-section" data-i18n="navIdentita" class="hover:text-anthro-dark transition-colors">Identità</a>
+                <a href="#fid-registry-section" data-i18n="navLinking" class="hover:text-anthro-dark transition-colors">Instance Linking</a>
+                <a href="#relay-section" data-i18n="navRelay" class="hover:text-anthro-dark transition-colors">P2P Network</a>
+                <a href="#activitypub-section" data-i18n="navAp" class="hover:text-anthro-dark transition-colors">ActivityPub</a>
+                <a href="#tech-stack-section" data-i18n="navTech" class="hover:text-anthro-dark transition-colors">Stack & Flusso</a>
+                <a href="#dev-docs-section" data-i18n="navDev" class="hover:text-anthro-dark transition-colors">Guida Dev</a>
+            </nav>
+
+            <!-- Controls: Language & Theme Toggles -->
             <div class="flex items-center gap-2">
-                <span class="font-sans font-bold text-base tracking-tight text-anthro-dark">FID Protocol</span>
-                <span class="text-xs font-mono uppercase bg-anthro-dark/5 border border-anthro-dark/15 text-anthro-muted px-2 py-0.5 rounded-full font-semibold">Zen SEA SSO</span>
-                <span class="text-xs font-mono text-anthro-muted/70">· Powered by TuneCamp</span>
+                <div id="relayStatusPill" class="hidden xl:flex items-center gap-2.5 px-4 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono">
+                    <span id="relayStatusDot" class="w-2 h-2 rounded-full bg-amber-600"></span>
+                    <span id="relayStatusText" class="text-anthro-dark font-medium">Connecting...</span>
+                </div>
+
+                <button id="langToggleBtn" title="Cambia lingua / Switch language" class="px-3 py-1.5 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono font-semibold text-anthro-dark hover:bg-anthro-dark/10 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span id="langLabel">IT 🇮🇹</span>
+                </button>
+                <button id="themeToggleBtn" title="Cambia tema / Toggle dark mode" class="px-3 py-1.5 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono font-semibold text-anthro-dark hover:bg-anthro-dark/10 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span id="themeIcon">🌙</span>
+                </button>
+
+                <a href="https://github.com/scobru/fid" target="_blank" class="hidden sm:inline-flex btn-anthro text-xs py-1.5 px-3">
+                    <span>GitHub</span>
+                    <span class="ml-1 font-mono">→</span>
+                </a>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="lg:hidden text-anthro-dark p-2 hover:bg-anthro-dark/5 rounded-full transition-all focus:outline-none cursor-pointer" title="Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
             </div>
         </div>
 
-        <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-anthro-muted">
-            <a href="#identity-section" data-i18n="navIdentita" class="hover:text-anthro-dark transition-colors">Identità</a>
-            <a href="#fid-registry-section" data-i18n="navLinking" class="hover:text-anthro-dark transition-colors">Instance Linking</a>
-            <a href="#relay-section" data-i18n="navRelay" class="hover:text-anthro-dark transition-colors">P2P Network</a>
-            <a href="#activitypub-section" data-i18n="navAp" class="hover:text-anthro-dark transition-colors">ActivityPub</a>
-            <a href="#tech-stack-section" data-i18n="navTech" class="hover:text-anthro-dark transition-colors">Stack & Flusso</a>
-            <a href="#dev-docs-section" data-i18n="navDev" class="hover:text-anthro-dark transition-colors">Guida Dev</a>
-        </nav>
-
-        <!-- Controls: Language & Theme Toggles -->
-        <div class="flex items-center gap-2.5">
-            <div id="relayStatusPill" class="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono">
-                <span id="relayStatusDot" class="w-2 h-2 rounded-full bg-amber-600"></span>
-                <span id="relayStatusText" class="text-anthro-dark font-medium">Connecting...</span>
-            </div>
-
-            <button id="langToggleBtn" title="Cambia lingua / Switch language" class="px-3.5 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono font-semibold text-anthro-dark hover:bg-anthro-dark/10 transition-all flex items-center gap-1.5 cursor-pointer">
-                <span id="langLabel">IT 🇮🇹</span>
-            </button>
-            <button id="themeToggleBtn" title="Cambia tema / Toggle dark mode" class="px-3.5 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono font-semibold text-anthro-dark hover:bg-anthro-dark/10 transition-all flex items-center gap-1.5 cursor-pointer">
-                <span id="themeIcon">🌙</span>
-            </button>
-
-            <a href="https://github.com/scobru/fid" target="_blank" class="btn-anthro text-xs">
-                <span>GitHub</span>
-                <span class="ml-2 font-mono">→</span>
-            </a>
+        <!-- Mobile Navigation Dropdown/Drawer -->
+        <div id="mobileNavMenu" class="hidden lg:hidden border-t border-anthro-dark/10 bg-anthro-bg dark:bg-anthro-dark/95 w-full transition-all duration-300">
+            <nav class="flex flex-col p-4 space-y-3 text-sm font-medium text-anthro-muted">
+                <a href="#identity-section" data-i18n="navIdentita" class="block py-2 px-3 rounded-lg hover:bg-anthro-dark/5 dark:hover:bg-white/5 hover:text-anthro-dark dark:hover:text-white transition-all">Identità</a>
+                <a href="#fid-registry-section" data-i18n="navLinking" class="block py-2 px-3 rounded-lg hover:bg-anthro-dark/5 dark:hover:bg-white/5 hover:text-anthro-dark dark:hover:text-white transition-all">Instance Linking</a>
+                <a href="#relay-section" data-i18n="navRelay" class="block py-2 px-3 rounded-lg hover:bg-anthro-dark/5 dark:hover:bg-white/5 hover:text-anthro-dark dark:hover:text-white transition-all">P2P Network</a>
+                <a href="#activitypub-section" data-i18n="navAp" class="block py-2 px-3 rounded-lg hover:bg-anthro-dark/5 dark:hover:bg-white/5 hover:text-anthro-dark dark:hover:text-white transition-all">ActivityPub</a>
+                <a href="#tech-stack-section" data-i18n="navTech" class="block py-2 px-3 rounded-lg hover:bg-anthro-dark/5 dark:hover:bg-white/5 hover:text-anthro-dark dark:hover:text-white transition-all">Stack & Flusso</a>
+                <a href="#dev-docs-section" data-i18n="navDev" class="block py-2 px-3 rounded-lg hover:bg-anthro-dark/5 dark:hover:bg-white/5 hover:text-anthro-dark dark:hover:text-white transition-all">Guida Dev</a>
+                
+                <!-- Extra GitHub link for small screens -->
+                <a href="https://github.com/scobru/fid" target="_blank" class="sm:hidden block text-center btn-anthro text-xs py-2 px-3 rounded-xl mt-2 w-full justify-center">
+                    <span>GitHub</span>
+                    <span class="ml-1 font-mono">→</span>
+                </a>
+            </nav>
         </div>
     </header>
 
@@ -1548,6 +1568,21 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
             document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
                 if (typeof window.toggleTheme === 'function') window.toggleTheme();
             });
+
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileNavMenu = document.getElementById('mobileNavMenu');
+            if (mobileMenuBtn && mobileNavMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileNavMenu.classList.toggle('hidden');
+                });
+                // Close menu when any nav link inside it is clicked
+                mobileNavMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => {
+                        mobileNavMenu.classList.add('hidden');
+                    });
+                });
+            }
 
             const methodBadge = document.getElementById('methodBadge');
             if (methodBadge) methodBadge.textContent = 'Zen SEA (Gun/PBKDF2)';
