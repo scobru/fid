@@ -125,7 +125,7 @@ The Identity card is a single alias + passphrase form: `zenPair({ seed: alias + 
 
 > **The portal is replaceable, not authoritative.** It holds no user record. Anyone can host `portal.html`, and a user typing the same alias and passphrase into it gets the same identity — which is exactly why the WebAuthn path had to go: an RP-bound credential would have made *this* deployment the identity.
 
-> Instance Passport linking (Section 2) is implemented server-side (`FidChallengeManager`/`FidPassportIssuer`) but has no working portal UI: issuing a valid Passport requires the target instance's own server secret, which a generic multi-instance portal never holds. A real client for this flow must talk to that specific instance's `/api/auth/zen/challenge` and `/api/auth/zen/link` endpoints directly.
+> Instance Passport linking (Section 2) is supported in `portal.html` via the **FID Registry** UI (`handleFidRegistryAdd`), which requests a challenge from `/api/auth/zen/challenge` and posts the signed challenge to `/api/auth/zen/link` to obtain the signed Instance Passport.
 
 **SSO Flow:** The `sso.html` page implements the client SSO flow described in [Section 4](#4-login-with-fid-sso-protocol), producing an `FidSsoToken` and a domain-scoped `apSeed` verifiable server-side with `FidSsoHandler`. Both the portal and any other hosted SSO page must gate the redirect through the shared `resolveRedirectUri()` rule (`src/sso/redirect.ts`) — it is dependency-free precisely so a plain browser page can import the same tested code the server uses.
 
@@ -192,7 +192,7 @@ The same `(source, domain, username)` triple always produces the **identical** A
 ### 3. "Login with FID" SSO Flow
 
 ```typescript
-import { FidSsoHandler } from "fid";
+import { FidSsoHandler, createZenMasterKeySource, resolveRedirectUri } from "fid";
 
 const ssoHandler = new FidSsoHandler("app-secret-key");
 
@@ -204,7 +204,6 @@ const ssoReq = ssoHandler.createSsoRequest(
 );
 
 // 1b. Before redirecting the user, the client page must vet the redirect target itself
-import { resolveRedirectUri } from "fid";
 const target = resolveRedirectUri(ssoReq.redirectUri, ssoReq.instanceDomain);
 if (!target) throw new Error("refusing to redirect: not HTTPS on instanceDomain");
 
