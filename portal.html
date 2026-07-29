@@ -88,11 +88,12 @@
     <!-- Anthropic Minimalist Top Navigation Bar -->
     <header class="px-6 lg:px-12 py-6 flex items-center justify-between border-b border-anthro-dark/10">
         <div class="flex items-center gap-4">
-            <span class="font-serif text-2xl font-bold tracking-tight text-anthro-dark">AI</span>
+            <span class="font-serif text-2xl font-bold tracking-tight text-anthro-dark">FID</span>
             <span class="text-anthro-dark/40 text-lg">|</span>
             <div class="flex items-center gap-2">
                 <span class="font-sans font-bold text-base tracking-tight text-anthro-dark">FID Protocol</span>
-                <span class="text-[10px] font-mono uppercase bg-anthro-dark/5 border border-anthro-dark/15 text-anthro-muted px-2 py-0.5 rounded-full font-semibold">Zen SEA SSO</span>
+                <span class="text-xs font-mono uppercase bg-anthro-dark/5 border border-anthro-dark/15 text-anthro-muted px-2 py-0.5 rounded-full font-semibold">Zen SEA SSO</span>
+                <span class="text-xs font-mono text-anthro-muted/70">· Powered by TuneCamp</span>
             </div>
         </div>
 
@@ -110,7 +111,7 @@
                 <span id="relayStatusText" class="text-anthro-dark font-medium">Connecting...</span>
             </div>
             <a href="https://github.com/scobru/fid" target="_blank" class="btn-anthro text-xs">
-                <span>Try FID Portal</span>
+                <span>GitHub</span>
                 <span class="ml-2 font-mono">→</span>
             </a>
         </div>
@@ -138,25 +139,25 @@
                 <!-- Client App Details Grid -->
                 <div class="space-y-3 pt-2 border-t border-anthro-dark/10">
                     <div class="flex justify-between items-center py-2 border-b border-anthro-dark/10 text-xs">
-                        <span class="font-mono text-[11px] uppercase text-anthro-muted font-semibold tracking-wider">CLIENT APP</span>
+                        <span class="font-mono text-xs uppercase text-anthro-muted font-semibold tracking-wider">CLIENT APP</span>
                         <span id="ssoClientId" class="font-mono text-anthro-dark font-medium">tunecamp-instance</span>
                     </div>
                     <div class="flex justify-between items-center py-2 border-b border-anthro-dark/10 text-xs">
-                        <span class="font-mono text-[11px] uppercase text-anthro-muted font-semibold tracking-wider">TARGET INSTANCE</span>
+                        <span class="font-mono text-xs uppercase text-anthro-muted font-semibold tracking-wider">TARGET INSTANCE</span>
                         <span id="ssoInstanceDomain" class="font-mono text-anthro-dark font-medium break-all">sudorecords.scobrudot.dev</span>
                     </div>
                     <div class="flex justify-between items-start py-2 border-b border-anthro-dark/10 text-xs">
-                        <span class="font-mono text-[11px] uppercase text-anthro-muted font-semibold tracking-wider">ACTIVE IDENTITY</span>
+                        <span class="font-mono text-xs uppercase text-anthro-muted font-semibold tracking-wider">ACTIVE IDENTITY</span>
                         <div class="text-right">
                             <span id="ssoUserAlias" class="font-mono font-bold text-anthro-dark block">@anonymous</span>
-                            <span id="ssoZenPubKey" class="font-mono text-anthro-muted text-[11px] break-all block max-w-xs">-</span>
+                            <span id="ssoZenPubKey" class="font-mono text-anthro-muted text-xs break-all block max-w-xs">-</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Security Assurance -->
                 <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10 text-xs space-y-1">
-                    <span class="font-semibold text-anthro-dark block font-mono uppercase text-[10px] tracking-wider">Cosa riceve l'istanza</span>
+                    <span class="font-semibold text-anthro-dark block font-mono uppercase text-xs tracking-wider">Cosa riceve l'istanza</span>
                     <p class="text-anthro-muted leading-relaxed">
                         La tua chiave master non lascia mai questo browser. L'istanza riceve una firma temporanea
                         e la chiave ActivityPub derivata <span class="font-mono">solo per questo dominio</span>,
@@ -171,11 +172,11 @@
                 <!-- Actions -->
                 <div id="ssoActions" class="flex flex-col sm:flex-row gap-3 pt-4">
                     <button id="ssoAuthorizeBtn" class="btn-anthro flex-1 text-sm justify-between">
-                        <span>Authorize Access</span>
+                        <span>Autorizza Accesso</span>
                         <span class="font-mono">→</span>
                     </button>
                     <button id="ssoCancelBtn" class="btn-anthro-outline text-sm">
-                        Cancel
+                        Annulla
                     </button>
                 </div>
 
@@ -198,11 +199,11 @@
                 </p>
                 <div class="pt-2 flex flex-wrap gap-3">
                     <button id="exportIdentityBackupBtn" class="btn-anthro text-xs">
-                        <span>Export Backup JSON</span>
+                        <span>Esporta Backup JSON</span>
                         <span class="ml-2 font-mono">→</span>
                     </button>
                     <button id="generateRandomKeysBtn" class="btn-anthro-outline text-xs">
-                        Generate Random Keys
+                        Genera Chiavi Casuali
                     </button>
                 </div>
             </div>
@@ -213,11 +214,11 @@
                 <!-- Card 1: Identity Creation (Zen SEA) -->
                 <div class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">IDENTITY CREATION</span>
+                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">IDENTITY CREATION</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Master Key Source
                         </h2>
-                        <p class="text-anthro-muted text-xs leading-relaxed">
+                        <p class="text-anthro-muted text-sm leading-relaxed">
                             La tua identità si deriva da alias + passphrase. Nessun account, nessun server: le stesse due parole riproducono la stessa identità su qualsiasi dispositivo, e da lì un'identità ActivityPub deterministica per dominio/username.
                         </p>
 
@@ -225,28 +226,28 @@
                         <div id="zenPane" role="tabpanel">
                             <form id="userPassForm" class="space-y-3 pt-2">
                                 <div>
-                                    <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
+                                    <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
                                     <input type="text" id="userInput" required placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
                                 </div>
 
                                 <div>
-                                    <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Passphrase Segreta</label>
+                                    <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Passphrase Segreta</label>
                                     <input type="password" id="passInput" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
-                                    <p id="passStrength" class="text-[10px] font-mono mt-1 text-anthro-muted"></p>
-                                    <p class="text-[10px] text-anthro-muted mt-1 leading-relaxed">
+                                    <p id="passStrength" class="text-xs font-mono mt-1 text-anthro-muted"></p>
+                                    <p class="text-xs text-anthro-muted mt-1 leading-relaxed">
                                         La tua chiave pubblica viaggia in chiaro in ogni token SSO: chi la vede può provare
                                         passphrase offline all'infinito, senza nessun server che lo rallenti. La passphrase
                                         <strong>è</strong> la tua identità, e non si può cambiare senza cambiare identità.
                                     </p>
                                 </div>
 
-                                <label class="flex items-start gap-2 text-[10px] text-anthro-muted cursor-pointer">
+                                <label class="flex items-start gap-2 text-xs text-anthro-muted cursor-pointer">
                                     <input type="checkbox" id="existingIdentityCheck" class="mt-0.5">
                                     <span>Sto sbloccando un'identità che esiste già (salta il controllo di robustezza)</span>
                                 </label>
 
                                 <button type="submit" class="w-full btn-anthro text-xs mt-2">
-                                    <span>Authenticate Pair</span>
+                                    <span>Autentica</span>
                                     <span class="font-mono">→</span>
                                 </button>
                             </form>
@@ -256,11 +257,11 @@
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
                         <div class="flex justify-between text-anthro-dark/50">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">ACTIVE USER</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">ACTIVE USER</span>
                             <span id="userSessionBadge" class="font-bold text-anthro-dark">@anonymous</span>
                         </div>
                         <div class="flex justify-between text-anthro-dark/50">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">METHOD</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">METHOD</span>
                             <span id="methodBadge" class="text-anthro-dark font-medium">Zen SEA (Gun/PBKDF2)</span>
                         </div>
                     </div>
@@ -269,17 +270,17 @@
                 <!-- Card 2: Active Keys Display -->
                 <div id="identity-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">KEYPAIR CREDENTIALS</span>
+                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">KEYPAIR CREDENTIALS</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Zen SEA Keys
                         </h2>
-                        <p class="text-anthro-muted text-xs leading-relaxed">
+                        <p class="text-anthro-muted text-sm leading-relaxed">
                             Le tue chiavi crittografiche attive risiedono esclusivamente nel browser e non vengono mai trasmesse.
                         </p>
 
                         <div class="space-y-3 pt-2">
                             <div>
-                                <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Public Key (zenPubKey)</label>
+                                <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Public Key (zenPubKey)</label>
                                 <div class="relative">
                                     <input type="text" id="dashZenPubKey" readonly class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark pr-8 focus:outline-none select-all" value="-">
                                     <button id="copyZenPubKeyBtn" class="absolute right-2 top-2 text-anthro-dark/40 hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
@@ -288,8 +289,8 @@
 
                             <div>
                                 <div class="flex justify-between items-center mb-1">
-                                    <label class="block text-[10px] font-mono uppercase text-anthro-muted">Private Key (priv)</label>
-                                    <button id="togglePrivateKeyVisibilityBtn" class="text-[10px] font-mono text-anthro-dark underline">
+                                    <label class="block text-xs font-mono uppercase text-anthro-muted">Private Key (priv)</label>
+                                    <button id="togglePrivateKeyVisibilityBtn" class="text-xs font-mono text-anthro-dark underline">
                                         <span id="privToggleText">Mostra</span>
                                     </button>
                                 </div>
@@ -303,11 +304,11 @@
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
                         <div class="flex justify-between">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">STATUS</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">STATUS</span>
                             <span class="text-emerald-700 font-medium">Valid & Active</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">STORAGE</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">STORAGE</span>
                             <span class="text-anthro-dark font-medium">Browser LocalStorage</span>
                         </div>
                     </div>
@@ -316,11 +317,11 @@
                 <!-- Card 3: Cross-Instance Artist Linking (FID Registry) -->
                 <div id="fid-registry-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">CROSS-INSTANCE LINKING</span>
+                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">CROSS-INSTANCE LINKING</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Instance Registry
                         </h2>
-                        <p class="text-anthro-muted text-xs leading-relaxed">
+                        <p class="text-anthro-muted text-sm leading-relaxed">
                             Collega i tuoi artisti su diverse istanze TuneCamp. Il portal aggrega il tuo profilo unificato.
                         </p>
 
@@ -330,11 +331,11 @@
                             </div>
 
                             <div class="pt-4 border-t border-anthro-dark/10">
-                                <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Aggiungi Istanza</label>
+                                <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Aggiungi Istanza</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="fidRegistryInstanceInput" placeholder="es. sudorecords.scobrudot.dev" class="flex-1 bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
                                     <input type="text" id="fidRegistryArtistInput" placeholder="Artist name (opzionale)" class="flex-1 bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
-                                    <button id="fidRegistryAddBtn" class="btn-anthro text-xs">Link</button>
+                                    <button id="fidRegistryAddBtn" class="btn-anthro text-xs">Collega</button>
                                 </div>
                             </div>
                         </div>
@@ -342,11 +343,11 @@
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
                         <div class="flex justify-between">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">TOTAL LINKED</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">TOTAL LINKED</span>
                             <span id="fidRegistryCount" class="text-anthro-dark font-medium">0</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">VERIFIED</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">VERIFIED</span>
                             <span id="fidRegistryVerified" class="text-anthro-dark font-medium">0</span>
                         </div>
                     </div>
@@ -355,24 +356,24 @@
                 <!-- Card 4: P2P Network Relay Status -->
                 <div id="relay-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">P2P RELAY NETWORK</span>
+                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">P2P RELAY NETWORK</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Zen Graph Relay
                         </h2>
-                        <p class="text-anthro-muted text-xs leading-relaxed">
+                        <p class="text-anthro-muted text-sm leading-relaxed">
                             Connessione WebSocket diretta al nodo di relay P2P per la propagazione del grafo di identità.
                         </p>
 
                         <div class="space-y-3 pt-2">
                             <div>
-                                <label class="block text-[10px] font-mono uppercase text-anthro-muted mb-1">Broadcast Ping Message</label>
+                                <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Broadcast Ping Message</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="p2pPingMsg" value="Handshake P2P FID Identity Node" class="flex-1 bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none">
                                     <button id="sendP2pPingBtn" class="btn-anthro-outline text-xs">Ping</button>
                                 </div>
                             </div>
 
-                            <div class="bg-anthro-dark text-white rounded-xl p-3 font-mono text-[10px] max-h-28 overflow-y-auto space-y-1" id="relayLogBox">
+                            <div class="bg-anthro-dark text-white rounded-xl p-3 font-mono text-xs max-h-28 overflow-y-auto space-y-1" id="relayLogBox">
                                 <div class="text-white/60">[System] Initializing P2P monitor...</div>
                             </div>
                         </div>
@@ -380,11 +381,11 @@
 
                     <div class="pt-4 border-t border-anthro-dark/10 space-y-2 font-mono text-xs">
                         <div class="flex justify-between">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">HOST</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">HOST</span>
                             <span class="text-anthro-dark font-medium">delay.scobrudot.dev</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans tracking-wider">STATE</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans tracking-wider">STATE</span>
                             <span id="widgetRelayState" class="text-amber-900 font-medium">Connecting...</span>
                         </div>
                     </div>
@@ -398,38 +399,38 @@
                 <!-- ActivityPub Derivation Card -->
                 <div class="anthro-card p-8 space-y-6">
                     <div class="space-y-2">
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">FEDIVERSE INTEGRATION</span>
+                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">FEDIVERSE INTEGRATION</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             ActivityPub Persona Sandbox
                         </h2>
-                        <p class="text-anthro-muted text-xs leading-relaxed">
+                        <p class="text-anthro-muted text-sm leading-relaxed">
                             Derivazione deterministica degli indirizzi WebFinger ed Ed25519 PBKDF2 seed per il Fediverse.
                         </p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 text-xs font-mono">
                         <div>
-                            <label class="block text-[10px] uppercase text-anthro-muted mb-1 font-sans">Target Domain</label>
+                            <label class="block text-xs uppercase text-anthro-muted mb-1 font-sans">Target Domain</label>
                             <input type="text" id="apDomainInput" value="tunecamp.org" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
                         </div>
                         <div>
-                            <label class="block text-[10px] uppercase text-anthro-muted mb-1 font-sans">Username</label>
+                            <label class="block text-xs uppercase text-anthro-muted mb-1 font-sans">Username</label>
                             <input type="text" id="apUserInput" value="alice" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-anthro-dark focus:outline-none">
                         </div>
                     </div>
 
                     <div class="space-y-3 pt-2 font-mono text-xs border-t border-anthro-dark/10">
                         <div class="flex justify-between py-1 border-b border-anthro-dark/10">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans">WEBFINGER</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans">WEBFINGER</span>
                             <span id="apWebfingerHandle" class="text-anthro-dark font-medium">@alice@tunecamp.org</span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-anthro-dark/10">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans">ACTOR URI</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans">ACTOR URI</span>
                             <span id="apActorUri" class="text-anthro-dark font-medium">https://tunecamp.org/users/alice</span>
                         </div>
                         <div class="flex justify-between items-center py-1">
-                            <span class="text-anthro-muted text-[10px] uppercase font-sans">ED25519 SEED</span>
-                            <span id="apSeedHex" class="text-anthro-dark font-medium break-all max-w-xs text-[11px]">-</span>
+                            <span class="text-anthro-muted text-xs uppercase font-sans">ED25519 SEED</span>
+                            <span id="apSeedHex" class="text-anthro-dark font-medium break-all max-w-xs text-xs">-</span>
                         </div>
                     </div>
                 </div>
@@ -440,18 +441,18 @@
             <div class="anthro-card p-8 space-y-4">
                 <div class="flex justify-between items-center border-b border-anthro-dark/10 pb-4">
                     <div>
-                        <span class="text-[11px] font-mono uppercase text-anthro-muted tracking-wider block">PAYLOAD INSPECTOR</span>
+                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">PAYLOAD INSPECTOR</span>
                         <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             FidSsoToken Payload Structure
                         </h2>
                     </div>
                     <button id="generateSsoTokenPreviewBtn" class="btn-anthro-outline text-xs">
-                        Update Payload
+                        Aggiorna Payload
                     </button>
                 </div>
 
-                <div class="bg-anthro-dark text-white rounded-xl p-5 font-mono text-xs overflow-x-auto">
-                    <pre id="ssoTokenJsonPreview" class="text-[11px] leading-relaxed text-amber-200 whitespace-pre-wrap break-all">// Click Update Payload to generate live FidSsoToken JSON</pre>
+                <div class="bg-anthro-dark text-white rounded-xl p-5 font-mono text-sm overflow-x-auto">
+                    <pre id="ssoTokenJsonPreview" class="text-sm leading-relaxed text-amber-300 whitespace-pre-wrap break-all">// Clicca "Aggiorna Payload" per generare il JSON live del FidSsoToken</pre>
                 </div>
             </div>
 
@@ -462,17 +463,17 @@
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-anthro-dark text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 text-xs font-mono">
         <span class="text-emerald-400">✓</span>
-        <span id="toastMsg">Copied to clipboard</span>
+        <span id="toastMsg">Copiato negli appunti</span>
     </div>
 
     <!-- Anthropic Minimalist Footer -->
     <footer class="border-t border-anthro-dark/10 py-8 px-6 lg:px-12 text-xs text-anthro-muted">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <span class="font-serif text-lg font-bold text-anthro-dark">AI</span>
-                <span>© 2026 FID (Fediverse-ID) Standard — Zero-Knowledge Cryptography</span>
+                <span class="font-serif text-lg font-bold text-anthro-dark">FID</span>
+                <span>© 2026 FID (Fediverse-ID) Standard — Zero-Knowledge Cryptography · Powered by TuneCamp</span>
             </div>
-            <div class="flex items-center gap-6 font-mono text-[11px]">
+            <div class="flex items-center gap-6 font-mono text-xs">
                 <a href="README.md" class="hover:text-anthro-dark transition-colors">Documentation</a>
                 <a href="https://github.com/scobru/fid" target="_blank" class="hover:text-anthro-dark transition-colors">GitHub</a>
                 <a href="portal.html" class="hover:text-anthro-dark transition-colors">Portal Home</a>
@@ -594,7 +595,7 @@
             if (!pass) { el.textContent = ""; return; }
             const result = checkPassphrase(pass);
             el.textContent = result.msg;
-            el.className = "text-[10px] font-mono mt-1 " + (result.ok ? "text-emerald-600" : "text-rose-600");
+            el.className = "text-xs font-mono mt-1 " + (result.ok ? "text-emerald-600" : "text-rose-600");
         }
 
         // Session Persistence
@@ -620,7 +621,7 @@
                 pair = await zenPair();
             } catch (err) {
                 console.error("[FID] Random keypair generation failed:", err);
-                alert("Failed to generate a Zen SEA keypair. Please try again.");
+                alert("Generazione della coppia di chiavi Zen SEA fallita. Riprova.");
                 return;
             }
 
@@ -633,7 +634,7 @@
             localStorage.setItem("fid_zen_pair", JSON.stringify(pair));
 
             updateDashboardUI();
-            showToast("Random keys generated");
+            showToast("Chiavi casuali generate");
         }
 
         async function handleUserPassSubmit(e) {
@@ -642,7 +643,7 @@
             const pass = document.getElementById("passInput")?.value.trim();
 
             if (!user || !pass) {
-                alert("Enter both username and passphrase!");
+                alert("Inserisci sia username che passphrase!");
                 return;
             }
 
@@ -669,7 +670,7 @@
                 pair = await deriveDeterministicPair(user, pass);
             } catch (err) {
                 console.error("[FID] Keypair derivation failed:", err);
-                alert("Failed to derive your Zen SEA keypair. Please try again.");
+                alert("Derivazione della coppia di chiavi Zen SEA fallita. Riprova.");
                 return;
             }
 
@@ -682,7 +683,7 @@
             localStorage.setItem("fid_zen_pair", JSON.stringify(pair));
 
             updateDashboardUI();
-            showToast(`Authenticated as @${currentAlias}`);
+            showToast(`Autenticato come @${currentAlias}`);
         }
 
         function updateDashboardUI() {
@@ -730,7 +731,7 @@
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
-            showToast("Backup JSON downloaded");
+            showToast("Backup JSON scaricato");
         }
 
         // WebSocket Relay Client (delay.scobrudot.dev)
@@ -824,9 +825,9 @@
 
             if (wsRelay && wsRelay.readyState === WebSocket.OPEN) {
                 wsRelay.send(JSON.stringify(payload));
-                showToast("P2P Ping sent");
+                showToast("Ping P2P inviato");
             } else {
-                showToast("P2P Ping simulated");
+                showToast("Ping P2P simulato");
             }
 
             const logBox = document.getElementById("relayLogBox");
@@ -1029,7 +1030,7 @@
             const el = document.getElementById(elementId);
             if (el) {
                 navigator.clipboard.writeText(el.value || el.textContent);
-                showToast("Copied to clipboard");
+                showToast("Copiato negli appunti");
             }
         }
 
@@ -1037,7 +1038,7 @@
             const el = document.getElementById(elementId);
             if (el) {
                 navigator.clipboard.writeText(el.textContent);
-                showToast("Copied to clipboard");
+                showToast("Copiato negli appunti");
             }
         }
 
@@ -1177,14 +1178,14 @@
                         <div class="anthro-bg border border-anthro-dark/15 rounded-xl p-3 space-y-1">
                             <div class="flex justify-between items-center">
                                 <span class="font-mono text-xs text-anthro-dark font-medium">${entry.instanceDomain}</span>
-                                <span class="text-[10px] px-2 py-0.5 rounded-full ${entry.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                                <span class="text-xs px-2 py-0.5 rounded-full ${entry.verified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
                                     ${entry.verified ? 'Verified' : 'Pending'}
                                 </span>
                             </div>
-                            <div class="text-[10px] text-anthro-muted font-mono">
+                            <div class="text-xs text-anthro-muted font-mono">
                                 Artist: ${entry.artistName} (${entry.artistSlug || 'N/A'})
                             </div>
-                            <div class="text-[10px] text-anthro-muted font-mono break-all">
+                            <div class="text-xs text-anthro-muted font-mono break-all">
                                 zenPubKey: ${entry.publicKey?.substring(0, 16)}...
                             </div>
                         </div>
