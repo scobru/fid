@@ -38,10 +38,10 @@
             }
         }
     </script>
-    <style>
         body {
             background-color: #f5f1e8;
             color: #1a1a1a;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .bg-anthro-dark {
             background-color: #1a1a1a !important;
@@ -96,7 +96,64 @@
             border-color: #1a1a1a;
             background-color: rgba(26, 26, 26, 0.04);
         }
+
+        /* Dark Mode Theme Overrides */
+        html.dark body, body.dark {
+            background-color: #0b0c10 !important;
+            color: #e6e8ee !important;
+        }
+        html.dark .bg-anthro-bg, body.dark .bg-anthro-bg {
+            background-color: #0b0c10 !important;
+        }
+        html.dark .bg-anthro-card, body.dark .bg-anthro-card {
+            background-color: #161822 !important;
+        }
+        html.dark .bg-anthro-dark, body.dark .bg-anthro-dark {
+            background-color: #1e2130 !important;
+        }
+        html.dark .text-anthro-dark, body.dark .text-anthro-dark {
+            color: #f0f2f8 !important;
+        }
+        html.dark .text-anthro-muted, body.dark .text-anthro-muted {
+            color: #9ba1b5 !important;
+        }
+        html.dark .anthro-card, body.dark .anthro-card {
+            background-color: #161822 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        html.dark .anthro-card:hover, body.dark .anthro-card:hover {
+            border-color: rgba(255, 255, 255, 0.22) !important;
+        }
+        html.dark .btn-anthro, body.dark .btn-anthro {
+            background-color: #f0f2f8 !important;
+            color: #0b0c10 !important;
+        }
+        html.dark .btn-anthro:hover, body.dark .btn-anthro:hover {
+            background-color: #ffffff !important;
+        }
+        html.dark .btn-anthro-outline, body.dark .btn-anthro-outline {
+            color: #f0f2f8 !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
+        }
+        html.dark .btn-anthro-outline:hover, body.dark .btn-anthro-outline:hover {
+            border-color: #f0f2f8 !important;
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        html.dark header, html.dark footer, body.dark header, body.dark footer {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        html.dark input, html.dark select, body.dark input, body.dark select {
+            background-color: #0e1017 !important;
+            color: #f0f2f8 !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+        }
     </style>
+    <script>
+        (function() {
+            const theme = localStorage.getItem('fid_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        })();
+    </script>
 </head>
 <body class="min-h-screen font-sans antialiased flex flex-col justify-between selection:bg-anthro-card selection:text-anthro-dark">
 
@@ -113,19 +170,27 @@
         </div>
 
         <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-anthro-muted">
-            <a href="#identity-section" class="hover:text-anthro-dark transition-colors">Identità</a>
-            <a href="#fid-registry-section" class="hover:text-anthro-dark transition-colors">Instance Linking</a>
-            <a href="#relay-section" class="hover:text-anthro-dark transition-colors">P2P Network</a>
-            <a href="#activitypub-section" class="hover:text-anthro-dark transition-colors">ActivityPub</a>
-            <a href="#dev-docs-section" class="hover:text-anthro-dark transition-colors">Guida Dev</a>
+            <a href="#identity-section" data-i18n="navIdentita" class="hover:text-anthro-dark transition-colors">Identità</a>
+            <a href="#fid-registry-section" data-i18n="navLinking" class="hover:text-anthro-dark transition-colors">Instance Linking</a>
+            <a href="#relay-section" data-i18n="navRelay" class="hover:text-anthro-dark transition-colors">P2P Network</a>
+            <a href="#activitypub-section" data-i18n="navAp" class="hover:text-anthro-dark transition-colors">ActivityPub</a>
+            <a href="#dev-docs-section" data-i18n="navDev" class="hover:text-anthro-dark transition-colors">Guida Dev</a>
         </nav>
 
-        <!-- Relay Status Pill Button -->
-        <div class="flex items-center gap-3">
-            <div id="relayStatusPill" class="flex items-center gap-2.5 px-4 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono">
+        <!-- Controls: Language & Theme Toggles -->
+        <div class="flex items-center gap-2.5">
+            <div id="relayStatusPill" class="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono">
                 <span id="relayStatusDot" class="w-2 h-2 rounded-full bg-amber-600"></span>
                 <span id="relayStatusText" class="text-anthro-dark font-medium">Connecting...</span>
             </div>
+
+            <button id="langToggleBtn" onclick="toggleLanguage()" title="Cambia lingua / Switch language" class="px-3.5 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono font-semibold text-anthro-dark hover:bg-anthro-dark/10 transition-all flex items-center gap-1.5 cursor-pointer">
+                <span id="langLabel">IT 🇮🇹</span>
+            </button>
+            <button id="themeToggleBtn" onclick="toggleTheme()" title="Cambia tema / Toggle dark mode" class="px-3.5 py-2 rounded-full bg-anthro-card border border-anthro-dark/10 text-xs font-mono font-semibold text-anthro-dark hover:bg-anthro-dark/10 transition-all flex items-center gap-1.5 cursor-pointer">
+                <span id="themeIcon">🌙</span>
+            </button>
+
             <a href="https://github.com/scobru/fid" target="_blank" class="btn-anthro text-xs">
                 <span>GitHub</span>
                 <span class="ml-2 font-mono">→</span>
@@ -143,11 +208,11 @@
             <div class="anthro-card p-10 space-y-8">
 
                 <div class="space-y-3">
-                    <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider">SINGLE SIGN-ON AUTHORIZATION</span>
-                    <h1 class="font-serif text-3xl font-medium text-anthro-dark tracking-tight leading-snug">
+                    <span data-i18n="ssoHeaderTag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider">SINGLE SIGN-ON AUTHORIZATION</span>
+                    <h1 data-i18n="ssoHeaderTitle" class="font-serif text-3xl font-medium text-anthro-dark tracking-tight leading-snug">
                         Richiesta di Autenticazione FID
                     </h1>
-                    <p class="text-anthro-muted text-sm leading-relaxed">
+                    <p data-i18n="ssoHeaderDesc" class="text-anthro-muted text-sm leading-relaxed">
                         Un'applicazione federata sta richiedendo la verifica della tua identità tramite firma a conoscenza zero.
                     </p>
                 </div>
@@ -188,10 +253,10 @@
                 <!-- Actions -->
                 <div id="ssoActions" class="flex flex-col sm:flex-row gap-3 pt-4">
                     <button id="ssoAuthorizeBtn" class="btn-anthro flex-1 text-sm justify-between">
-                        <span>Autorizza Accesso</span>
+                        <span data-i18n="btnAuthorize">Autorizza Accesso</span>
                         <span class="font-mono">→</span>
                     </button>
-                    <button id="ssoCancelBtn" class="btn-anthro-outline text-sm">
+                    <button id="ssoCancelBtn" data-i18n="btnCancel" class="btn-anthro-outline text-sm">
                         Annulla
                     </button>
                 </div>
@@ -206,19 +271,19 @@
 
             <!-- Hero Editorial Banner -->
             <div class="space-y-4 max-w-4xl">
-                <span class="text-xs font-mono uppercase tracking-wider text-anthro-muted">SELF-SOVEREIGN IDENTITY PROTOCOL</span>
-                <h1 class="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-anthro-dark leading-[1.15]">
+                <span data-i18n="heroTag" class="text-xs font-mono uppercase tracking-wider text-anthro-muted">SELF-SOVEREIGN IDENTITY PROTOCOL</span>
+                <h1 data-i18n="heroTitle" class="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-anthro-dark leading-[1.15]">
                     Introducing Fediverse-ID 1.0
                 </h1>
-                <p class="text-anthro-muted text-base sm:text-lg leading-relaxed font-normal max-w-3xl">
+                <p data-i18n="heroSubtitle" class="text-anthro-muted text-base sm:text-lg leading-relaxed font-normal max-w-3xl">
                     FID è il protocollo di autenticazione crittografica e Single Sign-On (SSO) basato su Zen SEA per applicazioni ActivityPub, istanze TuneCamp e la rete decentralizzata P2P.
                 </p>
                 <div class="pt-2 flex flex-wrap gap-3">
                     <button id="exportIdentityBackupBtn" class="btn-anthro text-xs">
-                        <span>Esporta Backup JSON</span>
+                        <span data-i18n="btnExport">Esporta Backup JSON</span>
                         <span class="ml-2 font-mono">→</span>
                     </button>
-                    <button id="generateRandomKeysBtn" class="btn-anthro-outline text-xs">
+                    <button id="generateRandomKeysBtn" data-i18n="btnRandom" class="btn-anthro-outline text-xs">
                         Genera Chiavi Casuali
                     </button>
                 </div>
@@ -228,13 +293,13 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 <!-- Card 1: Identity Creation (Zen SEA) -->
-                <div class="anthro-card p-8 flex flex-col justify-between space-y-6">
+                <div id="identity-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">IDENTITY CREATION</span>
-                        <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
+                        <span data-i18n="card1Tag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">IDENTITY CREATION</span>
+                        <h2 data-i18n="card1Title" class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Master Key Source
                         </h2>
-                        <p class="text-anthro-muted text-sm leading-relaxed">
+                        <p data-i18n="card1Desc" class="text-anthro-muted text-sm leading-relaxed">
                             La tua identità si deriva da alias + passphrase. Nessun account, nessun server: le stesse due parole riproducono la stessa identità su qualsiasi dispositivo, e da lì un'identità ActivityPub deterministica per dominio/username.
                         </p>
 
@@ -286,8 +351,8 @@
                 <!-- Card 2: Active Keys Display -->
                 <div id="identity-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">KEYPAIR CREDENTIALS</span>
-                        <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
+                        <span data-i18n="card2Tag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">KEYPAIR CREDENTIALS</span>
+                        <h2 data-i18n="card2Title" class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Zen SEA Keys
                         </h2>
                         <p class="text-anthro-muted text-sm leading-relaxed">
@@ -296,7 +361,7 @@
 
                         <div class="space-y-3 pt-2">
                             <div>
-                                <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Public Key (zenPubKey)</label>
+                                <label data-i18n="labelZenPubKey" class="block text-xs font-mono uppercase text-anthro-muted mb-1">Public Key (zenPubKey)</label>
                                 <div class="relative">
                                     <input type="text" id="dashZenPubKey" readonly class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark pr-8 focus:outline-none select-all" value="-">
                                     <button id="copyZenPubKeyBtn" class="absolute right-2 top-2 text-anthro-dark/40 hover:text-anthro-dark text-xs"><i class="fa-solid fa-copy"></i></button>
@@ -305,7 +370,7 @@
 
                             <div>
                                 <div class="flex justify-between items-center mb-1">
-                                    <label class="block text-xs font-mono uppercase text-anthro-muted">Private Key (priv)</label>
+                                    <label data-i18n="labelMasterPrivKey" class="block text-xs font-mono uppercase text-anthro-muted">Private Key (priv)</label>
                                     <button id="togglePrivateKeyVisibilityBtn" class="text-xs font-mono text-anthro-dark underline">
                                         <span id="privToggleText">Mostra</span>
                                     </button>
@@ -333,11 +398,11 @@
                 <!-- Card 3: Cross-Instance Artist Linking (FID Registry) -->
                 <div id="fid-registry-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">CROSS-INSTANCE LINKING</span>
-                        <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
+                        <span data-i18n="registryTag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">CROSS-INSTANCE LINKING</span>
+                        <h2 data-i18n="registryTitle" class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Instance Registry
                         </h2>
-                        <p class="text-anthro-muted text-sm leading-relaxed">
+                        <p data-i18n="registryDesc" class="text-anthro-muted text-sm leading-relaxed">
                             Collega i tuoi artisti su diverse istanze TuneCamp. Il portal aggrega il tuo profilo unificato.
                         </p>
 
@@ -374,11 +439,11 @@
                 <!-- Card 4: P2P Network Relay Status -->
                 <div id="relay-section" class="anthro-card p-8 flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">P2P RELAY NETWORK</span>
-                        <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
+                        <span data-i18n="card3Tag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">P2P RELAY NETWORK</span>
+                        <h2 data-i18n="card3Title" class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             Zen Graph Relay
                         </h2>
-                        <p class="text-anthro-muted text-sm leading-relaxed">
+                        <p data-i18n="card3Desc" class="text-anthro-muted text-sm leading-relaxed">
                             Connessione WebSocket diretta al nodo di relay P2P per la propagazione del grafo di identità.
                         </p>
 
@@ -417,11 +482,11 @@
                 <!-- ActivityPub Derivation Card -->
                 <div class="anthro-card p-8 space-y-6">
                     <div class="space-y-2">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">FEDIVERSE INTEGRATION</span>
-                        <h2 class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
+                        <span data-i18n="apTag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">FEDIVERSE INTEGRATION</span>
+                        <h2 data-i18n="apTitle" class="font-serif text-2xl font-medium text-anthro-dark tracking-tight">
                             ActivityPub Persona Sandbox
                         </h2>
-                        <p class="text-anthro-muted text-sm leading-relaxed">
+                        <p data-i18n="apDesc" class="text-anthro-muted text-sm leading-relaxed">
                             Derivazione deterministica degli indirizzi WebFinger ed Ed25519 PBKDF2 seed per il Fediverse.
                         </p>
                     </div>
@@ -481,13 +546,13 @@
                 
                 <div class="space-y-3 border-b border-anthro-dark/10 pb-6">
                     <div class="flex items-center justify-between flex-wrap gap-2">
-                        <span class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">DEVELOPER INTEGRATION GUIDE</span>
+                        <span data-i18n="devTag" class="text-xs font-mono uppercase text-anthro-muted tracking-wider block">DEVELOPER INTEGRATION GUIDE</span>
                         <span class="text-xs font-mono uppercase bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-semibold">FID v4.0.0 Ready</span>
                     </div>
-                    <h2 class="font-serif text-3xl font-medium text-anthro-dark tracking-tight">
+                    <h2 data-i18n="devTitle" class="font-serif text-3xl font-medium text-anthro-dark tracking-tight">
                         Come Integrare FID nelle tue App Fediverso
                     </h2>
-                    <p class="text-anthro-muted text-sm leading-relaxed max-w-3xl">
+                    <p data-i18n="devDesc" class="text-anthro-muted text-sm leading-relaxed max-w-3xl">
                         Guida completa con snippet di codice per implementare il protocollo Single Sign-On (SSO), la derivazione deterministica delle chiavi ActivityPub (Ed25519) e il sistema di collegamento tra istanze (Instance Passports).
                     </p>
                 </div>
@@ -495,16 +560,16 @@
                 <!-- Navigation Tabs for Code Snippets -->
                 <div class="space-y-6">
                     <div class="flex flex-wrap gap-2 border-b border-anthro-dark/10 pb-3 font-mono text-xs">
-                        <button id="devTabBtn-sso" onclick="switchDevTab('sso')" class="dev-tab-btn active px-4 py-2 rounded-xl bg-anthro-dark text-white font-medium transition-all">
+                        <button id="devTabBtn-sso" onclick="switchDevTab('sso')" data-i18n="tabSso" class="dev-tab-btn active px-4 py-2 rounded-xl bg-anthro-dark text-white font-medium transition-all">
                             1. Login with FID (SSO)
                         </button>
-                        <button id="devTabBtn-ap" onclick="switchDevTab('ap')" class="dev-tab-btn px-4 py-2 rounded-xl bg-anthro-bg text-anthro-dark hover:bg-anthro-dark/10 font-medium transition-all">
+                        <button id="devTabBtn-ap" onclick="switchDevTab('ap')" data-i18n="tabAp" class="dev-tab-btn px-4 py-2 rounded-xl bg-anthro-bg text-anthro-dark hover:bg-anthro-dark/10 font-medium transition-all">
                             2. Derivazione ActivityPub
                         </button>
-                        <button id="devTabBtn-passport" onclick="switchDevTab('passport')" class="dev-tab-btn px-4 py-2 rounded-xl bg-anthro-bg text-anthro-dark hover:bg-anthro-dark/10 font-medium transition-all">
+                        <button id="devTabBtn-passport" onclick="switchDevTab('passport')" data-i18n="tabPassport" class="dev-tab-btn px-4 py-2 rounded-xl bg-anthro-bg text-anthro-dark hover:bg-anthro-dark/10 font-medium transition-all">
                             3. Passport & Linking
                         </button>
-                        <button id="devTabBtn-backend" onclick="switchDevTab('backend')" class="dev-tab-btn px-4 py-2 rounded-xl bg-anthro-bg text-anthro-dark hover:bg-anthro-dark/10 font-medium transition-all">
+                        <button id="devTabBtn-backend" onclick="switchDevTab('backend')" data-i18n="tabBackend" class="dev-tab-btn px-4 py-2 rounded-xl bg-anthro-bg text-anthro-dark hover:bg-anthro-dark/10 font-medium transition-all">
                             4. Express Server Backend
                         </button>
                     </div>
@@ -1502,7 +1567,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
             window.switchDevTab = function(tabId) {
                 document.querySelectorAll('.dev-tab-content').forEach(el => el.classList.add('hidden'));
                 document.querySelectorAll('.dev-tab-btn').forEach(btn => {
-                    btn.classList.remove('bg-anthro-dark', 'text-white');
+                    btn.classList.remove('bg-anthro-dark', 'text-white', 'active');
                     btn.classList.add('bg-anthro-bg', 'text-anthro-dark');
                 });
 
@@ -1511,7 +1576,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                 if (targetContent) targetContent.classList.remove('hidden');
                 if (targetBtn) {
                     targetBtn.classList.remove('bg-anthro-bg', 'text-anthro-dark');
-                    targetBtn.classList.add('bg-anthro-dark', 'text-white');
+                    targetBtn.classList.add('bg-anthro-dark', 'text-white', 'active');
                 }
             };
 
@@ -1519,9 +1584,164 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                 const el = document.getElementById(elementId);
                 if (el) {
                     navigator.clipboard.writeText(el.textContent);
-                    showToast('Codice copiato negli appunti!');
+                    showToast(currentLang === 'en' ? 'Code copied to clipboard!' : 'Codice copiato negli appunti!');
                 }
             };
+
+            // ---------------------------------------------------------------------------
+            // Theme & i18n Translation Engine
+            // ---------------------------------------------------------------------------
+            let currentTheme = localStorage.getItem('fid_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            let currentLang = localStorage.getItem('fid_lang') || 'it';
+
+            function applyTheme(theme) {
+                currentTheme = theme;
+                localStorage.setItem('fid_theme', theme);
+                const themeIcon = document.getElementById('themeIcon');
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.body.classList.add('dark');
+                    if (themeIcon) themeIcon.textContent = '☀️';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.body.classList.remove('dark');
+                    if (themeIcon) themeIcon.textContent = '🌙';
+                }
+            }
+
+            window.toggleTheme = function() {
+                applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            };
+
+            const translations = {
+                it: {
+                    navIdentita: "Identità",
+                    navLinking: "Instance Linking",
+                    navRelay: "P2P Network",
+                    navAp: "ActivityPub",
+                    navDev: "Guida Dev",
+                    heroTag: "SELF-SOVEREIGN IDENTITY PROTOCOL",
+                    heroTitle: "Introducing Fediverse-ID 1.0",
+                    heroSubtitle: "FID è il protocollo di autenticazione crittografica e Single Sign-On (SSO) basato su Zen SEA per applicazioni ActivityPub, istanze TuneCamp e la rete decentralizzata P2P.",
+                    btnExport: "Esporta Backup JSON",
+                    btnRandom: "Genera Chiavi Casuali",
+                    card1Tag: "IDENTITY CREATION",
+                    card1Title: "Master Key Source",
+                    card1Desc: "La tua identità si deriva da alias + passphrase. Nessun account, nessun server: le stesse due parole riproducono la stessa identità su qualsiasi dispositivo, e da lì un'identità ActivityPub deterministica per dominio/username.",
+                    labelUsername: "Username / Alias",
+                    labelPassphrase: "Passphrase Segreta",
+                    btnUnlock: "Sblocca / Rigenera Identità",
+                    card2Tag: "ACTIVE KEYS",
+                    card2Title: "Zen SEA Keypair",
+                    labelZenPubKey: "Zen Public Key (ID Globale)",
+                    labelMasterPrivKey: "Master Private Key",
+                    card3Tag: "P2P NETWORK",
+                    card3Title: "Zen P2P Graph Relay",
+                    card3Desc: "Connessione WebSocket diretta con il relay P2P per la sincronizzazione dei messaggi encrypted.",
+                    btnPing: "Invia Ping P2P",
+                    registryTag: "FEDERATED IDENTITIES",
+                    registryTitle: "FID Registry — Collegamenti Istanza",
+                    registryDesc: "Collega l'identità Zen SEA con le istanze TuneCamp autorizzate.",
+                    labelInstanceDomain: "Dominio Istanza (es. sudorecords.scobrudot.dev)",
+                    labelArtistName: "Nome Artista / Profilo Locale",
+                    btnLinkInstance: "Collega Istanza",
+                    apTag: "FEDIVERSE INTEGRATION",
+                    apTitle: "ActivityPub Persona Sandbox",
+                    apDesc: "Derivazione deterministica degli indirizzi WebFinger ed Ed25519 PBKDF2 seed per il Fediverse.",
+                    labelTargetDomain: "Target Domain",
+                    inspectorTag: "PAYLOAD INSPECTOR",
+                    inspectorTitle: "FidSsoToken Payload Structure",
+                    btnUpdatePayload: "Aggiorna Payload",
+                    devTag: "DEVELOPER INTEGRATION GUIDE",
+                    devTitle: "Come Integrare FID nelle tue App Fediverso",
+                    devDesc: "Guida completa con snippet di codice per implementare il protocollo Single Sign-On (SSO), la derivazione deterministica delle chiavi ActivityPub (Ed25519) e il sistema di collegamento tra istanze (Instance Passports).",
+                    tabSso: "1. Login with FID (SSO)",
+                    tabAp: "2. Derivazione ActivityPub",
+                    tabPassport: "3. Passport & Linking",
+                    tabBackend: "4. Express Server Backend",
+                    ssoHeaderTag: "SINGLE SIGN-ON AUTHORIZATION",
+                    ssoHeaderTitle: "Richiesta di Autenticazione FID",
+                    ssoHeaderDesc: "Un'applicazione federata sta richiedendo la verifica della tua identità tramite firma a conoscenza zero.",
+                    btnAuthorize: "Autorizza Accesso",
+                    btnCancel: "Annulla"
+                },
+                en: {
+                    navIdentita: "Identity",
+                    navLinking: "Instance Linking",
+                    navRelay: "P2P Network",
+                    navAp: "ActivityPub",
+                    navDev: "Dev Guide",
+                    heroTag: "SELF-SOVEREIGN IDENTITY PROTOCOL",
+                    heroTitle: "Introducing Fediverse-ID 1.0",
+                    heroSubtitle: "FID is the zero-knowledge cryptographic identity and Single Sign-On (SSO) protocol powered by Zen SEA for ActivityPub apps, TuneCamp instances, and P2P decentralized networks.",
+                    btnExport: "Export JSON Backup",
+                    btnRandom: "Generate Random Keys",
+                    card1Tag: "IDENTITY CREATION",
+                    card1Title: "Master Key Source",
+                    card1Desc: "Your identity is derived from alias + passphrase. No account, no server: the same two words reproduce the same identity on any device, and from there a deterministic ActivityPub identity per domain/username.",
+                    labelUsername: "Username / Alias",
+                    labelPassphrase: "Secret Passphrase",
+                    btnUnlock: "Unlock / Regenerate Identity",
+                    card2Tag: "ACTIVE KEYS",
+                    card2Title: "Zen SEA Keypair",
+                    labelZenPubKey: "Zen Public Key (Global ID)",
+                    labelMasterPrivKey: "Master Private Key",
+                    card3Tag: "P2P NETWORK",
+                    card3Title: "Zen P2P Graph Relay",
+                    card3Desc: "Direct WebSocket connection with the P2P relay for encrypted message synchronization.",
+                    btnPing: "Send P2P Ping",
+                    registryTag: "FEDERATED IDENTITIES",
+                    registryTitle: "FID Registry — Instance Linking",
+                    registryDesc: "Link your Zen SEA identity with authorized TuneCamp instances.",
+                    labelInstanceDomain: "Instance Domain (e.g. sudorecords.scobrudot.dev)",
+                    labelArtistName: "Artist Name / Local Profile",
+                    btnLinkInstance: "Link Instance",
+                    apTag: "FEDIVERSE INTEGRATION",
+                    apTitle: "ActivityPub Persona Sandbox",
+                    apDesc: "Deterministic derivation of WebFinger addresses and Ed25519 PBKDF2 seeds for the Fediverse.",
+                    labelTargetDomain: "Target Domain",
+                    inspectorTag: "PAYLOAD INSPECTOR",
+                    inspectorTitle: "FidSsoToken Payload Structure",
+                    btnUpdatePayload: "Update Payload",
+                    devTag: "DEVELOPER INTEGRATION GUIDE",
+                    devTitle: "How to Integrate FID in your Fediverse Apps",
+                    devDesc: "Comprehensive guide with code snippets to implement Single Sign-On (SSO), deterministic ActivityPub Ed25519 key derivation, and cross-instance linking (Instance Passports).",
+                    tabSso: "1. Login with FID (SSO)",
+                    tabAp: "2. ActivityPub Derivation",
+                    tabPassport: "3. Passport & Linking",
+                    tabBackend: "4. Express Server Backend",
+                    ssoHeaderTag: "SINGLE SIGN-ON AUTHORIZATION",
+                    ssoHeaderTitle: "FID Authentication Request",
+                    ssoHeaderDesc: "A federated application is requesting verification of your identity via zero-knowledge signature.",
+                    btnAuthorize: "Authorize Access",
+                    btnCancel: "Cancel"
+                }
+            };
+
+            function applyLanguage(lang) {
+                currentLang = lang;
+                localStorage.setItem('fid_lang', lang);
+                document.documentElement.lang = lang;
+                
+                const langLabel = document.getElementById('langLabel');
+                if (langLabel) langLabel.textContent = lang === 'it' ? 'IT 🇮🇹' : 'EN 🇬🇧';
+
+                const dict = translations[lang] || translations.it;
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (dict[key]) {
+                        el.textContent = dict[key];
+                    }
+                });
+            }
+
+            window.toggleLanguage = function() {
+                applyLanguage(currentLang === 'it' ? 'en' : 'it');
+            };
+
+            // Apply saved settings
+            applyTheme(currentTheme);
+            applyLanguage(currentLang);
 
             // Initial render
             renderFidRegistry();
