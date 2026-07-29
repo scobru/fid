@@ -11,6 +11,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
 
     <!-- Tailwind CSS (Local Vendor with CDN Fallback) -->
     <script src="vendor/tailwind.js"></script>
@@ -598,7 +604,7 @@
                                     <i class="fa-regular fa-copy"></i> Copia Codice
                                 </button>
                             </div>
-                            <pre class="bg-anthro-dark text-emerald-300 p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetSso">import { FidSsoHandler, createZenMasterKeySource, deriveApSeed, resolveRedirectUri } from 'fid';
+                            <pre class="bg-anthro-dark p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetSso" class="language-typescript">import { FidSsoHandler, createZenMasterKeySource, deriveApSeed, resolveRedirectUri } from 'fid';
 
 // 1. Definisci i parametri dell'applicazione client
 const clientId = 'my-fediverse-app';
@@ -653,7 +659,7 @@ window.location.href = `${redirectUri}?fid_code=${code}`;</code></pre>
                                     <i class="fa-regular fa-copy"></i> Copia Codice
                                 </button>
                             </div>
-                            <pre class="bg-anthro-dark text-emerald-300 p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetAp">import { createZenMasterKeySource, deriveApIdentity } from 'fid';
+                            <pre class="bg-anthro-dark p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetAp" class="language-typescript">import { createZenMasterKeySource, deriveApIdentity } from 'fid';
 
 // Crea la sorgente di chiavi master Zen SEA
 const zenSource = createZenMasterKeySource(masterPrivKey, zenPubKey);
@@ -688,7 +694,7 @@ console.log(apIdentity.privateKeyPem);   // -----BEGIN PRIVATE KEY-----\n...
                                     <i class="fa-regular fa-copy"></i> Copia Codice
                                 </button>
                             </div>
-                            <pre class="bg-anthro-dark text-emerald-300 p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetPassport">import { signPayload } from 'fid';
+                            <pre class="bg-anthro-dark p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetPassport" class="language-typescript">import { signPayload } from 'fid';
 
 // 1. Richiedi la sfida dall'istanza passando la chiave pubblica Zen
 const challengeRes = await fetch(
@@ -740,7 +746,7 @@ const registryRecord = {
                                     <i class="fa-regular fa-copy"></i> Copia Codice
                                 </button>
                             </div>
-                            <pre class="bg-anthro-dark text-emerald-300 p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetBackend">import express from 'express';
+                            <pre class="bg-anthro-dark p-5 rounded-b-xl font-mono text-xs overflow-x-auto leading-relaxed" style="background-color: #1a1a1a;"><code id="codeSnippetBackend" class="language-javascript">import express from 'express';
 import crypto from 'node:crypto';
 import { FidChallengeManager, FidPassportIssuer, FidSsoHandler, seedToEd25519Pem } from 'fid';
 
@@ -1846,6 +1852,11 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
 
             // Initial render
             renderFidRegistry();
+
+            // Syntax highlighting for developer code snippets
+            if (typeof hljs !== 'undefined') {
+                hljs.highlightAll();
+            }
         });
     </script>
 </body>
