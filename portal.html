@@ -1210,7 +1210,7 @@
                 if (registry.length === 0) {
                     listEl.innerHTML = '<p class="text-anthro-muted text-xs text-center py-4">Nessuna istanza collegata. Aggiungi la prima sotto.</p>';
                 } else {
-                    listEl.innerHTML = registry.map(entry => `
+                    listEl.innerHTML = registry.map((entry, i) => `
                         <div class="anthro-bg border border-anthro-dark/15 rounded-xl p-3 space-y-1">
                             <div class="flex justify-between items-center">
                                 <span class="font-mono text-xs text-anthro-dark font-medium">${entry.instanceDomain}</span>
@@ -1224,6 +1224,9 @@
                             <div class="text-xs text-anthro-muted font-mono break-all">
                                 zenPubKey: ${entry.publicKey?.substring(0, 16)}...
                             </div>
+                            <button type="button" onclick="copyFidRegistryEntry(${i})" class="text-xs px-2 py-1 mt-1 rounded bg-anthro-dark/10 hover:bg-anthro-dark/20 text-anthro-dark font-medium">
+                                Copia JSON per collegare sulla tua istanza
+                            </button>
                         </div>
                     `).join('');
                 }
@@ -1231,6 +1234,14 @@
                 if (countEl) countEl.textContent = registry.length;
                 if (verifiedEl) verifiedEl.textContent = registry.filter(e => e.verified).length;
             }
+
+            window.copyFidRegistryEntry = function(index) {
+                const registry = JSON.parse(localStorage.getItem('fid_registry') || '[]');
+                const entry = registry[index];
+                if (!entry) return;
+                navigator.clipboard.writeText(JSON.stringify(entry));
+                showToast('JSON copiato! Incollalo nella sezione "Collegamenti Cross-Instance" del tuo profilo TuneCamp.');
+            };
 
             // Initial render
             renderFidRegistry();
