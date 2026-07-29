@@ -43,6 +43,21 @@
             background-color: #f5f1e8;
             color: #1a1a1a;
         }
+        .bg-anthro-dark {
+            background-color: #1a1a1a !important;
+        }
+        .bg-anthro-bg {
+            background-color: #f5f1e8 !important;
+        }
+        .bg-anthro-card {
+            background-color: #ebe3d5 !important;
+        }
+        .text-anthro-dark {
+            color: #1a1a1a !important;
+        }
+        .text-anthro-muted {
+            color: #5a5348 !important;
+        }
         .anthro-card {
             background-color: #ebe3d5;
             border: 1px solid rgba(26, 26, 26, 0.10);
@@ -331,11 +346,13 @@
                             </div>
 
                             <div class="pt-4 border-t border-anthro-dark/10">
-                                <label class="block text-xs font-mono uppercase text-anthro-muted mb-1">Aggiungi Istanza</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="fidRegistryInstanceInput" placeholder="es. sudorecords.scobrudot.dev" class="flex-1 bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
-                                    <input type="text" id="fidRegistryArtistInput" placeholder="Artist name (opzionale)" class="flex-1 bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
-                                    <button id="fidRegistryAddBtn" class="btn-anthro text-xs">Collega</button>
+                                <label class="block text-xs font-mono uppercase text-anthro-muted mb-2">Aggiungi Istanza</label>
+                                <div class="space-y-2">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <input type="text" id="fidRegistryInstanceInput" placeholder="es. sudorecords.scobrudot.dev" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                        <input type="text" id="fidRegistryArtistInput" placeholder="Artist name (opzionale)" class="w-full bg-anthro-bg border border-anthro-dark/15 rounded-xl px-3 py-2 text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                    </div>
+                                    <button id="fidRegistryAddBtn" class="btn-anthro text-xs w-full justify-center">Collega</button>
                                 </div>
                             </div>
                         </div>
@@ -451,8 +468,8 @@
                     </button>
                 </div>
 
-                <div class="bg-anthro-dark text-white rounded-xl p-5 font-mono text-sm overflow-x-auto">
-                    <pre id="ssoTokenJsonPreview" class="text-sm leading-relaxed text-amber-300 whitespace-pre-wrap break-all">// Clicca "Aggiorna Payload" per generare il JSON live del FidSsoToken</pre>
+                <div class="bg-anthro-dark text-white rounded-xl p-5 font-mono text-sm overflow-x-auto" style="background-color: #1a1a1a;">
+                    <pre id="ssoTokenJsonPreview" class="text-sm leading-relaxed whitespace-pre-wrap break-all text-emerald-300">// Clicca "Aggiorna Payload" per generare il JSON live del FidSsoToken</pre>
                 </div>
             </div>
 
@@ -861,6 +878,25 @@
         }
 
         // SSO Token Generator Preview
+        function syntaxHighlightJson(jsonObj) {
+            const json = JSON.stringify(jsonObj, null, 2);
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'text-amber-300';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'text-sky-300 font-semibold';
+                    } else {
+                        cls = 'text-emerald-300';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'text-purple-300';
+                } else if (/null/.test(match)) {
+                    cls = 'text-rose-300';
+                }
+                return `<span class="${cls}">${match}</span>`;
+            });
+        }
+
         async function generateSsoTokenPreview() {
             const domain = document.getElementById("apDomainInput")?.value.trim() || "sudorecords.scobrudot.dev";
             const username = document.getElementById("apUserInput")?.value.trim() || (currentAlias !== "anonymous" ? currentAlias : "alice");
@@ -883,7 +919,7 @@
             };
 
             const prev = document.getElementById("ssoTokenJsonPreview");
-            if (prev) prev.textContent = JSON.stringify(ssoToken, null, 2);
+            if (prev) prev.innerHTML = syntaxHighlightJson(ssoToken);
         }
 
         // SSO Authorize Flow (Mode A)
