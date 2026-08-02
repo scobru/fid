@@ -345,12 +345,12 @@
                             <form id="userPassForm" class="space-y-3 pt-2">
                                 <div>
                                     <label data-i18n="labelUsername" class="block text-xs font-mono uppercase text-anthro-muted mb-1">Username / Alias</label>
-                                    <input type="text" id="userInput" required data-i18n-placeholder="placeholderUser" placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                    <input type="text" id="userInput" required autocomplete="username" data-i18n-placeholder="placeholderUser" placeholder="es. scobru" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
                                 </div>
 
                                 <div>
                                     <label data-i18n="labelPassphrase" class="block text-xs font-mono uppercase text-anthro-muted mb-1">Passphrase Segreta</label>
-                                    <input type="password" id="passInput" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
+                                    <input type="password" id="passInput" required autocomplete="current-password" placeholder="••••••••••••" class="w-full px-3 py-2 bg-anthro-bg border border-anthro-dark/15 rounded-xl text-xs font-mono text-anthro-dark focus:outline-none focus:border-anthro-dark">
                                     <p id="passStrength" class="text-xs font-mono mt-1 text-anthro-muted"></p>
                                     <p data-i18n="passphraseWarning" class="text-xs text-anthro-muted mt-1 leading-relaxed">
                                         La tua chiave pubblica viaggia in chiaro in ogni token SSO: chi la vede può provare passphrase offline all'infinito, senza nessun server che lo rallenti. La passphrase è la tua identità, e non si può cambiare senza cambiare identità.
@@ -639,7 +639,7 @@
                         <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10">
                             <span class="font-mono text-xs font-bold text-anthro-dark block mb-1">Zen SEA (secp256k1)</span>
                             <p data-i18n="techStackZenDesc" class="text-anthro-muted text-xs leading-relaxed">
-                                Algoritmi SEA di GunDB per crittografia ellittica e firme asimmetriche direttamente sul browser.
+                                Algoritmi SEA di ZenDB per crittografia ellittica e firme asimmetriche direttamente sul browser.
                             </p>
                         </div>
                         <div class="p-4 bg-anthro-bg rounded-xl border border-anthro-dark/10">
@@ -954,6 +954,8 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
         let currentKeys = { pub: '', priv: '', epub: '', epriv: '' };
         let wsRelay = null;
         const RELAY_URL = "wss://delay.scobrudot.dev/zen";
+        let currentTheme = localStorage.getItem('fid_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        let currentLang = localStorage.getItem('fid_lang') || 'it';
 
         // The alias to act as.
         function activeAlias() {
@@ -1756,8 +1758,6 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
             // ---------------------------------------------------------------------------
             // Theme & i18n Translation Engine
             // ---------------------------------------------------------------------------
-            let currentTheme = localStorage.getItem('fid_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            let currentLang = localStorage.getItem('fid_lang') || 'it';
 
             function applyTheme(theme) {
                 currentTheme = theme;
@@ -1849,7 +1849,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                     techStackTag: "STACK TECNOLOGICO",
                     techStackTitle: "Componenti Crittografiche e Standard",
                     techStackDesc: "FID si basa su librerie crittografiche moderne ad alte prestazioni e standard W3C aperti per garantire la compatibilità con il Fediverse decentralizzato.",
-                    techStackZenDesc: "Algoritmi SEA di GunDB per crittografia ellittica e firme asimmetriche direttamente sul browser.",
+                    techStackZenDesc: "Algoritmi SEA di ZenDB per crittografia ellittica e firme asimmetriche direttamente sul browser.",
                     techStackPbkdf2Desc: "Derivazione sicura delle chiavi con 10,000 iterazioni eseguite nativamente tramite Web Crypto API.",
                     techStackEdDesc: "Generazione di chiavi identità ActivityPub (PEM) veloci e resistenti agli attacchi side-channel.",
                     techStackApDesc: "Standard del W3C per lo scambio di messaggi e la scoperta degli attori decentralizzati nel social web.",
@@ -1946,7 +1946,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
                     techStackTag: "TECHNOLOGY STACK",
                     techStackTitle: "Cryptographic Components & Standards",
                     techStackDesc: "FID is built upon modern high-performance cryptographic libraries and open W3C standards to ensure compliance with the decentralized Fediverse.",
-                    techStackZenDesc: "GunDB's SEA algorithms for elliptic curve cryptography and asymmetric signatures directly inside the browser.",
+                    techStackZenDesc: "ZenDB's SEA algorithms for elliptic curve cryptography and asymmetric signatures directly inside the browser.",
                     techStackPbkdf2Desc: "Secure key derivation with 10,000 iterations run natively via the Web Crypto API.",
                     techStackEdDesc: "Fast and side-channel attack resistant generation of ActivityPub actor keys (PEM).",
                     techStackApDesc: "W3C standards for federated messaging and decentralized actor discovery across the social web.",

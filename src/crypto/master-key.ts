@@ -1,13 +1,24 @@
-import type { MasterKeySource, PublicMasterKeySource, DerivedApIdentity } from "../types.js";
-import { deriveApIdentity, deriveApSeed, seedToEd25519Pem } from "./derivation.js";
+import type {
+	MasterKeySource,
+	PublicMasterKeySource,
+	DerivedApIdentity,
+} from "../types.js";
+import {
+	deriveApIdentity,
+	deriveApSeed,
+	seedToEd25519Pem,
+} from "./derivation.js";
 
 /**
  * @llm-summary Creates a Zen SEA master key source from private/public key pair.
  * @llm-context Used when user authenticates with their Zen SEA keypair (secp256k1).
  * The private key is used for signing; the public key is used for verification and passport linking.
  */
-export function createZenMasterKeySource(privKey: string, pubKey: string): MasterKeySource {
-  return { type: 'zen', privKey, pubKey };
+export function createZenMasterKeySource(
+	privKey: string,
+	pubKey: string,
+): MasterKeySource {
+	return { type: "zen", privKey, pubKey };
 }
 
 /**
@@ -22,25 +33,10 @@ export { deriveApIdentity, deriveApSeed, seedToEd25519Pem };
  * @llm-context Zen SEA is currently the only source; the guard is kept so call sites stay valid if
  * another source is ever added.
  */
-export function isZenSource(source: MasterKeySource): source is MasterKeySource & { type: 'zen' } {
-  return source.type === 'zen';
-}
-
-/**
- * @llm-summary Extracts the stable identifier used for passport linking and token signing.
- * @llm-context The zenPubKey (secp256k1 public key). This identifier is bound into the passport and
- * SSO token payload for verification.
- */
-export function getMasterKeyIdentifier(source: MasterKeySource): string {
-  return source.pubKey;
-}
-
-/**
- * @llm-summary Extracts the verification key for signature verification.
- * @llm-context The secp256k1 public key, used with SEA verify.
- */
-export function getVerificationKey(source: MasterKeySource): string {
-  return source.pubKey;
+export function isZenSource(
+	source: MasterKeySource,
+): source is MasterKeySource & { type: "zen" } {
+	return source.type === "zen";
 }
 
 /**
@@ -48,6 +44,8 @@ export function getVerificationKey(source: MasterKeySource): string {
  * @llm-context A Zen MasterKeySource holds `privKey`; serialising it into a token would hand the user's
  * master private key to every relying app. Call this before putting a source on the wire.
  */
-export function toPublicMasterKeySource(source: MasterKeySource): PublicMasterKeySource {
-  return { type: 'zen', pubKey: source.pubKey };
+export function toPublicMasterKeySource(
+	source: MasterKeySource,
+): PublicMasterKeySource {
+	return { type: "zen", pubKey: source.pubKey };
 }

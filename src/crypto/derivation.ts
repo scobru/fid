@@ -3,7 +3,10 @@ import { Buffer } from "node:buffer";
 import type { DerivedApIdentity, MasterKeySource } from "../types.js";
 
 // PKCS#8 DER header for Ed25519 private keys (16 bytes)
-const ED25519_PKCS8_HEADER = Buffer.from("302e020100300506032b657004220420", "hex");
+const ED25519_PKCS8_HEADER = Buffer.from(
+	"302e020100300506032b657004220420",
+	"hex",
+);
 const PBKDF2_ITERATIONS = 10000;
 const SEED_LENGTH = 32;
 const HASH_ALGO = "sha256";
@@ -22,41 +25,59 @@ const HASH_ALGO = "sha256";
  * Q: Can I change the password encoding or iteration count later? A: Not without re-keying every existing identity; `tests/derivation.test.ts` pins a known-answer vector to make any change fail loudly.
  */
 export function deriveApSeed(
-  source: MasterKeySource,
-  instanceDomain: string,
-  username: string
+	source: MasterKeySource,
+	instanceDomain: string,
+	username: string,
 ): Uint8Array {
-  const salt = `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`;
+	const salt = `fid:activitypub:${instanceDomain.toLowerCase()}:${username.toLowerCase()}`;
 
-  // Zen SEA: privKey is a base64url secp256k1 private key, used as a UTF-8 password.
-  if (!source.privKey) {
-    throw new Error('Zen source requires a non-empty privKey for seed derivation');
-  }
-  const masterSecret = Buffer.from(source.privKey, 'utf8');
+	// Zen SEA: privKey is a base64url secp256k1 private key, used as a UTF-8 password.
+	if (!source.privKey) {
+		throw new Error(
+			"Zen source requires a non-empty privKey for seed derivation",
+		);
+	}
+	const masterSecret = Buffer.from(source.privKey, "utf8");
 
-  // PBKDF2 deterministic derivation
-  return crypto.pbkdf2Sync(masterSecret, salt, PBKDF2_ITERATIONS, SEED_LENGTH, HASH_ALGO);
+	// PBKDF2 deterministic derivation
+	return crypto.pbkdf2Sync(
+		masterSecret,
+		salt,
+		PBKDF2_ITERATIONS,
+		SEED_LENGTH,
+		HASH_ALGO,
+	);
 }
 
 /**
  * @llm-summary Converts a 32-byte seed into Ed25519 PKCS#8 PEM keypair.
  * @llm-context Internal helper used by deriveApIdentity. Wraps seed in PKCS#8 DER envelope.
  */
-export function seedToEd25519Pem(seed: Uint8Array): { privateKeyPem: string; publicKeyPem: string } {
-  const derPrivateKey = Buffer.concat([ED25519_PKCS8_HEADER, Buffer.from(seed)]);
-  
-  const privateKeyObj = crypto.createPrivateKey({
-    key: derPrivateKey,
-    format: "der",
-    type: "pkcs8"
-  });
+export function seedToEd25519Pem(seed: Uint8Array): {
+	privateKeyPem: string;
+	publicKeyPem: string;
+} {
+	const derPrivateKey = Buffer.concat([
+		ED25519_PKCS8_HEADER,
+		Buffer.from(seed),
+	]);
 
-  const publicKeyObj = crypto.createPublicKey(privateKeyObj);
+	const privateKeyObj = crypto.createPrivateKey({
+		key: derPrivateKey,
+		format: "der",
+		type: "pkcs8",
+	});
 
-  const privateKeyPem = privateKeyObj.export({ type: "pkcs8", format: "pem" }).toString();
-  const publicKeyPem = publicKeyObj.export({ type: "spki", format: "pem" }).toString();
+	const publicKeyObj = crypto.createPublicKey(privateKeyObj);
 
-  return { privateKeyPem, publicKeyPem };
+	const privateKeyPem = privateKeyObj
+		.export({ type: "pkcs8", format: "pem" })
+		.toString();
+	const publicKeyPem = publicKeyObj
+		.export({ type: "spki", format: "pem" })
+		.toString();
+
+	return { privateKeyPem, publicKeyPem };
 }
 
 /**
@@ -68,43 +89,26 @@ export function seedToEd25519Pem(seed: Uint8Array): { privateKeyPem: string; pub
  * Q: Is the master private key stored? A: No, only derived PEM keys returned. Q: Can two usernames on same instance collide? A: No, salt includes username.
  */
 export function deriveApIdentity(
-  source: MasterKeySource,
-  instanceDomain: string,
-  username: string
+	source: MasterKeySource,
+	instanceDomain: string,
+	username: string,
 ): DerivedApIdentity {
-  const seed = deriveApSeed(source, instanceDomain, username);
-  const { privateKeyPem, publicKeyPem } = seedToEd25519Pem(seed);
+	const seed = deriveApSeed(source, instanceDomain, username);
+	const { privateKeyPem, publicKeyPem } = seedToEd25519Pem(seed);
 
-  const webfingerHandle = `@${username.toLowerCase()}@${instanceDomain.toLowerCase()}`;
-  const actorUri = `https://${instanceDomain.toLowerCase()}/users/${username.toLowerCase()}`;
+	const webfingerHandle = `@${username.toLowerCase()}@${instanceDomain.toLowerCase()}`;
+	const actorUri = `https://${instanceDomain.toLowerCase()}/users/${username.toLowerCase()}`;
 
-  const zenPubKey = source.pubKey;
+	const zenPubKey = source.pubKey;
 
-  return {
-    instanceDomain: instanceDomain.toLowerCase(),
-    username: username.toLowerCase(),
-    actorUri,
-    webfingerHandle,
-    masterKeySource: source,
-    zenPubKey,
-    publicKeyPem,
-    privateKeyPem
-  };
-}
-
-/**
- * @llm-summary Legacy alias for backward compatibility.
- * @deprecated Use deriveApIdentity with MasterKeySource instead.
- */
-export function deriveApKeypair(
-  masterPrivKey: string,
-  instanceDomain: string,
-  username: string,
-  masterPubKey: string = ""
-): DerivedApIdentity {
-  return deriveApIdentity(
-    { type: 'zen', privKey: masterPrivKey, pubKey: masterPubKey },
-    instanceDomain,
-    username
-  );
+	return {
+		instanceDomain: instanceDomain.toLowerCase(),
+		username: username.toLowerCase(),
+		actorUri,
+		webfingerHandle,
+		masterKeySource: source,
+		zenPubKey,
+		publicKeyPem,
+		privateKeyPem,
+	};
 }

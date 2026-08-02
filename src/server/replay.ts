@@ -11,36 +11,34 @@
  * token single-use. Q: Does this grow without bound? A: No — nonces are dropped once they are older
  * than the retention window, at which point the expiry check rejects the token anyway.
  */
-export interface FidReplayStore {
-  /** Returns false if the nonce was already used, true if this call claims it. */
-  claim(nonce: string, issuedAt: number): boolean;
-}
+export class FidReplayGuard {
+	private seen = new Map<string, number>();
+	private retentionMs: number;
 
-export class FidReplayGuard implements FidReplayStore {
-  private seen = new Map<string, number>();
-  private retentionMs: number;
+	constructor(
+		retentionMs: number = 15 * 60 * 1000,
+		sweepIntervalMs: number = 5 * 60 * 1000,
+	) {
+		this.retentionMs = retentionMs;
 
-  constructor(retentionMs: number = 15 * 60 * 1000, sweepIntervalMs: number = 5 * 60 * 1000) {
-    this.retentionMs = retentionMs;
+		const sweepTimer = setInterval(() => this.sweep(), sweepIntervalMs);
+		(sweepTimer as unknown as { unref?: () => void }).unref?.();
+	}
 
-    const sweepTimer = setInterval(() => this.sweep(), sweepIntervalMs);
-    (sweepTimer as unknown as { unref?: () => void }).unref?.();
-  }
+	public claim(nonce: string, issuedAt: number): boolean {
+		if (this.seen.has(nonce)) {
+			return false;
+		}
+		this.seen.set(nonce, issuedAt);
+		return true;
+	}
 
-  public claim(nonce: string, issuedAt: number): boolean {
-    if (this.seen.has(nonce)) {
-      return false;
-    }
-    this.seen.set(nonce, issuedAt);
-    return true;
-  }
-
-  private sweep(): void {
-    const cutoff = Date.now() - this.retentionMs;
-    for (const [nonce, issuedAt] of this.seen.entries()) {
-      if (issuedAt < cutoff) {
-        this.seen.delete(nonce);
-      }
-    }
-  }
+	private sweep(): void {
+		const cutoff = Date.now() - this.retentionMs;
+		for (const [nonce, issuedAt] of this.seen.entries()) {
+			if (issuedAt < cutoff) {
+				this.seen.delete(nonce);
+			}
+		}
+	}
 }
