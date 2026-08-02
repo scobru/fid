@@ -45,6 +45,7 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
 ## 🔑 Core Concepts & Cryptographic Architecture
 
 ### 1. The Master Key Source
+
 There is exactly one master key source: **Zen SEA**, a secp256k1 keypair derived deterministically from `alias:passphrase`.
 
 - **`zenPubKey`** (Public Key): the user's global immutable identifier. It travels in every SSO token and is public by design.
@@ -57,6 +58,7 @@ Because the keypair is a pure function of `alias:passphrase`, portability is str
 > **Consequence: the passphrase is the whole identity.** `zenPubKey` is public, so a weak passphrase is offline-brute-forceable by anyone who has seen one SSO token. Implementations MUST enforce a strong passphrase at identity creation (see [Conformance requirements](#-conformance-requirements)).
 
 ### 2. Two-Step Instance Passport Handshake
+
 To link a local instance profile (e.g. `@scobru` on a target instance) to a global Zen identity (`zenPubKey`):
 
 ```
@@ -78,9 +80,11 @@ Instance (Server)                     User / Portal (Client)
 4. **Public Identity Federation**: The instance exposes a public profile JSON (`/api/auth/zen/user/:username/public`) for cross-instance discovery.
 
 ### 3. Deterministic ActivityPub Key Derivation
+
 FID enables users to maintain consistent ActivityPub personas across multiple instances without storing separate RSA/Ed25519 key files per server.
 
 Using `deriveApIdentity()` (primary) or the legacy alias `deriveApKeypair()`:
+
 - **Input**: `MasterKeySource` + Target Domain + Username. The master secret is the Zen SEA **private** key (`privKey`, used as UTF-8 password material). Never the public key: it is public, so deriving from it would let anyone who has seen a token reconstruct the user's ActivityPub private key.
 - **Derivation**: Uses `PBKDF2-SHA256` over salt `fid:activitypub:<domain>:<username>` (both lowercased) to generate a 32-byte seed.
 - **Domain scoping is deliberate**: the domain is in the salt, so each instance gets a *different* AP keypair. A compromised instance holds a key that only works there and cannot impersonate the user anywhere else. The portable part of the identity is `zenPubKey`, not the AP key.
@@ -93,16 +97,20 @@ Using `deriveApIdentity()` (primary) or the legacy alias `deriveApKeypair()`:
   - `privateKeyPem`: ActivityPub HTTP Signature signing key
 
 ### 4. "Login with FID" SSO Protocol
+
 FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P apps.
 
 **Current Implementation:**
+
 1. Browser derives a 32-byte `apSeed` using standard Web Crypto API PBKDF2 (`hash: SHA-256`, 10,000 iterations) from the master secret (Zen `privKey`).
 2. Browser calls `issueSsoToken(ssoReq, username, masterKeySource)`, which signs `${clientId}:${instanceDomain}:${username}:${zenPubKey}:${issuedAt}:${nonce}` with the master private key, and embeds only the **public** half of the source in the token (`toPublicMasterKeySource`).
 3. Browser checks the redirect target with `resolveRedirectUri(redirectUri, instanceDomain)` — HTTPS (or loopback HTTP) and same host as `instanceDomain`, otherwise the flow is refused — then delivers the payload by **code exchange**: it POSTs `{ ssoToken, apSeed, mode: "code" }` to the instance and sends the user back carrying only a one-time code.
+
    ```text
    POST https://<instanceDomain>/api/auth/zen/sso   ->  { code }
    redirectUri?fid_code=<code>                          (app trades it for its session)
    ```
+
    The portal gets no session for the instance, and no key material ever enters the URL. If the instance answers without a `code` (too old for this flow), the portal **refuses** rather than falling back — a fallback would put the ActivityPub key back in the address bar. The legacy implicit form is `redirectUri#payload=encodeURIComponent(JSON.stringify({ ssoToken, apSeed }))`; it is deprecated because the fragment survives in the back button and in session restore.
 4. Target instance backend (Node.js) uses `await FidSsoHandler.validateSsoToken(ssoToken, maxAgeMs?)` to verify required fields, token age (max 15 min), single use (see below), and the signature against `masterKeySource.pubKey` (falling back to the flat `zenPubKey` field). It then validates `apSeed` length (32 bytes), wraps it into the `Ed25519 PKCS#8 DER` envelope using `node:crypto.createPrivateKey()`, and registers/logs in the user.
 
@@ -115,9 +123,11 @@ FID provides a lightweight Single Sign-On flow for third-party Fediverse & P2P a
 Browsers do not currently support synchronous Ed25519 PKCS#8 generation via Web Crypto API, which is why the `apSeed` derivation is done client-side and the Ed25519 key wrapping is done server-side.
 
 ### 5. 🌐 Central Authentication & Identity Portal (`portal.html`)
+
 FID includes a zero-dependency, single-page Web Application in [`portal.html`](file:///c:/Users/dev/source/repos/tunecamp/fid/portal.html) (also accessible via `index.html` and `sso.html`), deployed live at **[https://fid-portal.vercel.app/](https://fid-portal.vercel.app/)**.
 
 It functions as both:
+
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
 - **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs and calculating deterministic ActivityPub handles and seeds.
 
@@ -125,7 +135,7 @@ The Identity card is a single alias + passphrase form: `zenPair({ seed: alias + 
 
 > **The portal is replaceable, not authoritative.** It holds no user record. Anyone can host `portal.html`, and a user typing the same alias and passphrase into it gets the same identity — which is exactly why the WebAuthn path had to go: an RP-bound credential would have made *this* deployment the identity.
 
-> Instance Passport linking (Section 2) is supported in `portal.html` via the **FID Registry** UI (`handleFidRegistryAdd`), which requests a challenge from `/api/auth/zen/challenge` and posts the signed challenge to `/api/auth/zen/link` to obtain the signed Instance Passport.
+> Cross-instance artist linking is now managed externally at `tunecamp.org/profile.html`. The portal no longer provides a registry UI or exposes `/api/fid-registry` endpoints.
 
 **SSO Flow:** The `sso.html` page implements the client SSO flow described in [Section 4](#4-login-with-fid-sso-protocol), producing an `FidSsoToken` and a domain-scoped `apSeed` verifiable server-side with `FidSsoHandler`. Both the portal and any other hosted SSO page must gate the redirect through the shared `resolveRedirectUri()` rule (`src/sso/redirect.ts`) — it is dependency-free precisely so a plain browser page can import the same tested code the server uses.
 
@@ -296,7 +306,7 @@ FID's security rests on the passphrase, so an implementation that gets these wro
 v4 is a breaking release: the WebAuthn/passkey master key source is gone.
 
 | v3 | v4 |
-|---|---|
+| --- | --- |
 | `MasterKeySource` = `zen \| webauthn` union | `{ type: 'zen'; privKey; pubKey }` only |
 | `PublicMasterKeySource` = `zen \| webauthn` union | `{ type: 'zen'; pubKey }` only |
 | `validateSsoToken(token, publicDataFetcher?, trustedWebauthnKey?)` | `validateSsoToken(token, maxAgeMs?)` |
