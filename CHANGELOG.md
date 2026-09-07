@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.0.1] - 2026-09-07
+
+### Security
+
+- **An SSO token could name one identity key for verification and a different one for the relying app to trust.** A token carries the identity twice — `masterKeySource.pubKey` and the flat `zenPubKey` — and both copies arrive off the wire. `validateSsoToken` verified the signature against the first, while this library's own documentation tells relying apps to look the account up by the second ("the caller must still check that this pubKey is the one bound to the local account, by looking the user up by `zen_pub`"). An attacker needed nothing but the victim's *public* key, which every SSO token publishes: sign a payload naming your own keypair, put the victim's key in `zenPubKey`, omit the passport (it is only checked `if (token.passport)`), and validation returned `{ valid: true }` for a token that the relying app then resolved to the victim's account — full takeover of any FID-linked account, administrators included. `issueSsoToken` always writes the same key into both fields, so no honest token has them disagree; a mismatch is now refused outright rather than silently resolved in favour of either field. This restores the 4.0.0 invariant that "a token signed by a different keypair is a different user rather than an impersonation."
+
+- **A token dated in the future never expired.** The age check was one-sided (`Date.now() - issuedAt > maxAgeMs`), so a token whose `issuedAt` lay ahead of the verifier's clock had a negative age and passed forever; its replay-guard nonce was never swept either, because the sweep compares against that same attacker-supplied `issuedAt`. Tokens more than a minute ahead of the verifier's clock are now rejected.
+
+- **A failed challenge signature did not spend the challenge.** `FidChallengeManager.consumeChallenge` documents that it "deletes the challenge on both success and failure (expiry or invalid signature), preventing reuse", but the invalid-signature path returned early and left the entry in the map — a wrong signature cost the attacker nothing and the same live challenge could be attacked repeatedly for its whole TTL. The challenge is now consumed before the outcome is reported.
+
 ## [4.0.0] - 2026-07-28
 
 ### ⚠️ Breaking

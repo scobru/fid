@@ -58,13 +58,14 @@ export class FidChallengeManager {
       return false;
     }
 
-    const verified = await verifySignature(challengeKey, signature, zenPubKey);
-    if (!verified) {
-      return false;
-    }
-
+    // Consume before reporting the outcome. The documented contract is that a
+    // challenge is spent on failure too ("deletes the challenge on both success
+    // and failure ... preventing reuse"), but the failure path returned early and
+    // left it in the map — so a wrong signature cost the attacker nothing and the
+    // same live challenge could be attacked repeatedly for the whole TTL.
     this.activeChallenges.delete(challengeKey);
-    return true;
+
+    return await verifySignature(challengeKey, signature, zenPubKey);
   }
 
 /**
