@@ -6,6 +6,9 @@ import { FidReplayGuard } from "../server/replay.js";
 import { signPayload, verifySignature } from "../crypto/sea.js";
 import type { FidSsoRequest, FidSsoToken, MasterKeySource } from "../types.js";
 
+/** Tolerance for a relying app's clock running behind the issuer's. */
+const MAX_CLOCK_SKEW_MS = 60 * 1000;
+
 /**
  * @llm-summary Orchestrates the full FID SSO flow: request creation, token issuance, and token validation.
  * @llm-context The central class for Fediverse authentication. Used by Fediverse apps to integrate "Login with FID". It coordinates deriveApIdentity (identity derivation), FidPassportIssuer (passport signing), and the Zen SEA crypto layer (token signing/verification).
@@ -113,6 +116,25 @@ export class FidSsoHandler {
 			token.masterKeySource?.pubKey ?? token.zenPubKey ?? "";
 		const sourceId = verificationKey;
 
+		// A token carries the identity key twice, and both copies are attacker-supplied.
+		// Verifying one while the relying app reads the other is an account takeover: the
+		// caller is told (in this method's own docs) to look the user up by `zenPubKey`,
+		// but the signature was checked against `masterKeySource.pubKey`. Sign a payload
+		// naming your own key, ship the victim's in `zenPubKey`, omit the passport, and
+		// validation passes for a session that resolves to the victim. There is no honest
+		// token where the two disagree — issueSsoToken writes the same key into both — so
+		// a mismatch is refused rather than silently resolved in favour of either.
+		if (
+			token.masterKeySource?.pubKey &&
+			token.zenPubKey &&
+			token.masterKeySource.pubKey !== token.zenPubKey
+		) {
+			return {
+				valid: false,
+				error: "SSO token identity mismatch (masterKeySource.pubKey != zenPubKey)",
+			};
+		}
+
 		if (
 			!token.username ||
 			!token.issuedAt ||
@@ -129,8 +151,18 @@ export class FidSsoHandler {
 			};
 		}
 
-		if (Date.now() - token.issuedAt > maxAgeMs) {
+		const age = Date.now() - token.issuedAt;
+		if (age > maxAgeMs) {
 			return { valid: false, error: "SSO token expired" };
+		}
+
+		// Only the lower bound was checked, so a token dated in the future had a negative
+		// age and could never expire — one minted with issuedAt years ahead authenticated
+		// forever, and its replay-guard nonce was never swept because the sweep compares
+		// against that same issuedAt. A minute of clock skew is allowed; beyond that the
+		// clock is wrong or the timestamp is forged, and neither should be honoured.
+		if (age < -MAX_CLOCK_SKEW_MS) {
+			return { valid: false, error: "SSO token issued in the future" };
 		}
 
 		const tokenPayload = `${token.clientId}:${token.instanceDomain}:${token.username}:${sourceId}:${token.issuedAt}:${token.nonce}`;
