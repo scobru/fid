@@ -57,6 +57,17 @@ Because the keypair is a pure function of `alias:passphrase`, portability is str
 
 > **Consequence: the passphrase is the whole identity.** `zenPubKey` is public, so a weak passphrase is offline-brute-forceable by anyone who has seen one SSO token. Implementations MUST enforce a strong passphrase at identity creation (see [Conformance requirements](#-conformance-requirements)).
 
+### 1b. One derivation for every app: `identity.js`
+
+FID, [smollog](https://github.com/scobru/smollog), [ZenVault](https://github.com/scobru/zenvault) and [ZenOS](https://github.com/scobru/zenos) all derive the master keypair with the same function, so one alias and passphrase is one `zenPubKey` in all of them. It lives in [`identity.js`](./identity.js): dependency-free, you pass the `ZEN` constructor you already loaded.
+
+```js
+import { deriveMasterPair } from 'https://cdn.jsdelivr.net/gh/scobru/fid@main/identity.js';
+const pair = await deriveMasterPair(ZEN, alias, passphrase); // ZEN.pair(null, { seed: alias.trim() + ':' + passphrase.trim() })
+```
+
+Both parts are case-sensitive. `tests/identity.test.mjs` pins a vector (`alice` / `correct horse battery staple` gives `0QVOEafm...`): changing the derivation re-keys every FID identity, so that test must never be edited to make it pass.
+
 ### 2. Two-Step Instance Passport Handshake
 
 To link a local instance profile (e.g. `@scobru` on a target instance) to a global Zen identity (`zenPubKey`):
