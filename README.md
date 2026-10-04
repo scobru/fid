@@ -62,7 +62,7 @@ Because the keypair is a pure function of `alias:passphrase`, portability is str
 FID, [smollog](https://github.com/scobru/smollog), [ZenVault](https://github.com/scobru/zenvault) and [ZenOS](https://github.com/scobru/zenos) all derive the master keypair with the same function, so one alias and passphrase is one `zenPubKey` in all of them. It lives in [`identity.js`](./identity.js): dependency-free, you pass the `ZEN` constructor you already loaded.
 
 ```js
-import { deriveMasterPair } from 'https://cdn.jsdelivr.net/gh/scobru/fid@main/identity.js';
+import { deriveMasterPair } from 'https://cdn.jsdelivr.net/gh/scobru/fid@7887fc3468a77943da8ef18a70c3936d1dc45a2a/identity.js';
 const pair = await deriveMasterPair(ZEN, alias, passphrase); // ZEN.pair(null, { seed: alias.trim() + ':' + passphrase.trim() })
 ```
 
