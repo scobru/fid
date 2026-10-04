@@ -946,6 +946,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
 
     <!-- Core FID Web Script -->
     <script type="module">
+        import { identitySeed } from './identity.js';
         import Zen from './vendor/zen.min.js';
         import { resolveRedirectUri } from './dist/src/sso/redirect.js';
         window.Zen = Zen;
@@ -1025,8 +1026,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
         }
 
         async function deriveDeterministicPair(user, pass) {
-            const seedStr = user + ':' + pass;
-            return zenPair({ seed: seedStr });
+            return zenPair({ seed: identitySeed(user, pass) });
         }
 
         // The passphrase is the master key. zen_pub is published in every SSO token, so an
