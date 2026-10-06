@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert";
-import pair from "@akaoio/zen/src/pair.js";
-import { signPayload } from "../src/crypto/sea.js";
+import { generateKeyPair as pair, signPayload } from "../src/crypto/sea.js";
 import { FidChallengeManager, FidPassportIssuer } from "../src/index.js";
 
 test("FID Challenge & Passport Authentication Flow", async () => {

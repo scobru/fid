@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert";
-import pair from "@akaoio/zen/src/pair.js";
+import { generateKeyPair as pair } from "../src/crypto/sea.js";
 import { FidSsoHandler, createZenMasterKeySource } from "../src/index.js";
 
 test("Login with FID SSO Flow (Zen SEA)", async () => {

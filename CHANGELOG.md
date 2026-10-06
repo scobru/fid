@@ -1,5 +1,14 @@
 # Changelog
 
+## [5.0.0] - 2026-10-06
+
+### ⚠️ Breaking
+
+- **Zen SEA is gone. Identities are plain Ed25519 keys and every existing FID identity is re-keyed.** `@akaoio/zen` was the only runtime dependency and only `src/crypto/sea.ts` used it. `generateKeyPair`, `signPayload` and `verifySignature` now use `node:crypto`; `identity.js` does the same in the browser with WebCrypto (`deriveMasterPair(alias, passphrase)`, `generatePair()`, `signData(data, priv)`). `pub`/`priv` are base64url, signatures are detached base64url. Old Zen keys and signatures no longer verify, so linked `zen_pub` values and passports must be re-created.
+- `FidKeyPair` is `{ pub, priv }` (`epub`/`epriv` removed). `deriveMasterPair` no longer takes a `ZEN` argument.
+- The portal's P2P relay widget, `vendor/zen.min.js` and the wasm files are removed.
+- Wire names are unchanged on purpose (`zenPubKey`, `masterKeySource.type: 'zen'`, `/api/auth/zen/*`).
+
 ## [4.0.1] - 2026-09-07
 
 ### Security

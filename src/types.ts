@@ -39,16 +39,13 @@ export interface FidPassport {
 }
 
 /**
- * @llm-summary A Zen SEA keypair containing both long-term identity keys and ephemeral keys.
- * @llm-context Used by the crypto layer for signing and verification operations; the long-term keys (pub/priv) represent the user's identity, while ephemeral keys (epub/epriv) support P2P session encryption.
- * @llm-edge-cases If any field is an empty string, sign/verify operations will fail at the zen library level. No validation is performed at the type level.
- * @llm-faq Q: What is the difference between pub/priv and epub/epriv? A: pub/priv are the long-term identity keypair; epub/epriv are ephemeral keys for P2P sessions. Q: Are these Ed25519 or secp256k1? A: They are secp256k1 keys backed by the Zen SEA library.
+ * @llm-summary An Ed25519 identity keypair: `pub` and `priv` are base64url (32 raw bytes each, the JWK `x` and `d`).
+ * @llm-context Used by the crypto layer for signing and verification. `priv` is the master secret.
+ * @llm-edge-cases If a field is empty, sign/verify fail (verify returns false). No validation at the type level.
  */
 export interface FidKeyPair {
   pub: string;
   priv: string;
-  epub: string;
-  epriv: string;
 }
 
 /**
@@ -65,14 +62,14 @@ export interface FidSignedPayload<T = unknown> {
 
 /**
  * @llm-summary Source of the master key used for deterministic ActivityPub identity derivation.
- * @llm-context One source: Zen SEA (secp256k1), derived deterministically from the user's alias and
+ * @llm-context One source (type `"zen"`, a name kept for wire compatibility), an Ed25519 key derived deterministically from the user's alias and
  * passphrase in the browser. A deterministic Ed25519 ActivityPub keypair is derived from it for a given
  * (instanceDomain, username) via PBKDF2, so the same alias+passphrase reproduces the same identity on any
  * device and through any portal.
  * @llm-edge-cases `privKey` is the master secret: it must never leave the origin the user typed their
  * passphrase into, and must never be serialised into an SSO token. Use toPublicMasterKeySource() first.
  * @llm-faq Q: Why not WebAuthn/passkeys? A: A passkey is bound to a Relying Party ID, which would make the
- * identity depend on one central domain and fork users across origins. Zen SEA keeps the identity portable
+ * identity depend on one central domain and fork users across origins. A plain keypair derived from alias+passphrase keeps the identity portable
  * and the portal replaceable. Q: Is this a discriminated union with one member on purpose? A: Yes — it keeps
  * the wire format and call sites stable if a second source is ever added.
  */
@@ -80,7 +77,7 @@ export type MasterKeySource = { type: 'zen'; privKey: string; pubKey: string };
 
 /**
  * @llm-summary The wire-safe projection of a MasterKeySource: everything needed to verify, nothing secret.
- * @llm-context Used as the `masterKeySource` field of FidSsoToken. MasterKeySource itself carries the Zen
+ * @llm-context Used as the `masterKeySource` field of FidSsoToken. MasterKeySource itself carries the
  * `privKey`, so embedding it in a token would ship the user's master private key to the relying app.
  * Build one with toPublicMasterKeySource().
  * @llm-edge-cases Verification only ever needs pubKey; it is the user's stable public identity and is safe
