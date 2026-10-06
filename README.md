@@ -2,7 +2,7 @@
 
 **FID (Fediverse-ID)** is a generic, self-sovereign, zero-knowledge cryptographic identity and Single-Sign-On (SSO) protocol designed for **any ActivityPub/Fediverse application**, **P2P web apps**, and **decentralized platforms**.
 
-It allows users to own a master cryptographic keypair derived from **an alias and a passphrase** (**Zen SEA**, secp256k1), which then deterministically derives per-domain ActivityPub keypairs via PBKDF2. There is no account to recover and no key file to back up: the same alias and passphrase reproduce the same identity on any device, in any browser, through any portal.
+It allows users to own a master cryptographic keypair derived from **an alias and a passphrase** (**Ed25519** via WebCrypto), which then deterministically derives per-domain ActivityPub keypairs via PBKDF2. There is no account to recover and no key file to back up: the same alias and passphrase reproduce the same identity on any device, in any browser, through any portal.
 
 > **v4 removed the WebAuthn/passkey source.** A passkey is bound to a Relying Party ID (eTLD+1), so the same human authenticating through two portals — say `fid-portal.vercel.app` and `tunecamp.org` — got two different credentials, two different master keys, and therefore two different identities. That is the opposite of a portable Fediverse identity, and it made one portal a hard dependency. See [Migration from v3](#-migration-from-v3).
 
@@ -24,12 +24,12 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
 ```
                                 ┌───────────────────────────┐
                                 │   fid-portal.vercel.app   │
-                                │  (Zen SEA Global Portal)  │
+                                │  (Global Portal)  │
                                 └─────────────┬─────────────┘
-                                              │  WSS (Zen Graph)
+                                              │  HTTPS
                                 ┌─────────────▼─────────────┐
                                 │   wss://delay.scobrudot.dev│
-                                │     Zen P2P Relay         │
+                                │     TuneCamp instances         │
                                 └─────────────┬─────────────┘
                                               │
                         ┌─────────────────────┴─────────────────────┐
@@ -46,7 +46,7 @@ Traditional identity systems rely on centralized OAuth servers, federated identi
 
 ### 1. The Master Key Source
 
-There is exactly one master key source: **Zen SEA**, a secp256k1 keypair derived deterministically from `alias:passphrase`.
+There is exactly one master key source: an **Ed25519** keypair (`pub`/`priv` are base64url, 32 bytes each) derived deterministically from `alias:passphrase` with PBKDF2-SHA256 (see `identity.js`).
 
 - **`zenPubKey`** (Public Key): the user's global immutable identifier. It travels in every SSO token and is public by design.
 - **`masterPrivKey`** (Private Key): re-derived in the browser from the passphrase. Never transmitted over the wire, never stored on any server.
@@ -63,14 +63,14 @@ FID, [smollog](https://github.com/scobru/smollog), [ZenVault](https://github.com
 
 ```js
 import { deriveMasterPair } from 'https://cdn.jsdelivr.net/gh/scobru/fid@7887fc3468a77943da8ef18a70c3936d1dc45a2a/identity.js';
-const pair = await deriveMasterPair(ZEN, alias, passphrase); // ZEN.pair(null, { seed: alias.trim() + ':' + passphrase.trim() })
+const pair = await deriveMasterPair(alias, passphrase); // ZEN.pair(null, { seed: alias.trim() + ':' + passphrase.trim() })
 ```
 
 Both parts are case-sensitive. `tests/identity.test.mjs` pins a vector (`alice` / `correct horse battery staple` gives `0QVOEafm...`): changing the derivation re-keys every FID identity, so that test must never be edited to make it pass.
 
 ### 2. Two-Step Instance Passport Handshake
 
-To link a local instance profile (e.g. `@scobru` on a target instance) to a global Zen identity (`zenPubKey`):
+To link a local instance profile (e.g. `@scobru` on a target instance) to a global FID identity (`zenPubKey`):
 
 ```
 Instance (Server)                     User / Portal (Client)
@@ -78,7 +78,7 @@ Instance (Server)                     User / Portal (Client)
       │ ─── 1. GET /api/auth/zen/challenge ───► │ (Generates one-time nonce)
       │                                         │
       │                                         │ ─── 2. Signs challenge payload
-      │                                         │      with Zen SEA private key
+      │                                         │      with private key
       │                                         │
       │ ◄── 3. POST /api/auth/zen/link ──────── │ (Submits SEA signature)
       │                                         │
@@ -86,7 +86,7 @@ Instance (Server)                     User / Portal (Client)
 ```
 
 1. **Challenge Generation**: The instance issues a timestamped one-time challenge `{ instanceDomain, username, nonce, timestamp }` using `FidChallengeManager`.
-2. **SEA Signature**: The user signs `${username}:${nonce}` with their Zen SEA private key (`signPayload`, backed by `@akaoio/zen`).
+2. **SEA Signature**: The user signs `${username}:${nonce}` with their private key (`signPayload`, backed by `@akaoio/zen`).
 3. **Verification & Passport Issuance**: The instance calls `consumeChallenge(username, nonce, signature, zenPubKey)`, which verifies the Zen SEA signature against `zenPubKey` (real secp256k1 verification, not just nonce presence) before consuming the nonce and issuing a cryptographic **Instance Passport Badge** (`FidPassport`) signed with the instance secret using `FidPassportIssuer`.
 4. **Public Identity Federation**: The instance exposes a public profile JSON (`/api/auth/zen/user/:username/public`) for cross-instance discovery.
 
@@ -140,7 +140,7 @@ FID includes a zero-dependency, single-page Web Application in [`portal.html`](f
 It functions as both:
 
 - **The Global Central Authentication Site** for OAuth/SSO consent flows (`sso.html?clientId=...&redirectUri=...&instanceDomain=...`).
-- **The Self-Sovereign Identity Management Dashboard** for generating Zen SEA keypairs and calculating deterministic ActivityPub handles and seeds.
+- **The Self-Sovereign Identity Management Dashboard** for generating identity keypairs and calculating deterministic ActivityPub handles and seeds.
 
 The Identity card is a single alias + passphrase form: `zenPair({ seed: alias + ':' + passphrase })` reproduces the keypair, so the same two strings unlock the same identity on any portal deployment.
 
@@ -175,7 +175,7 @@ const passportIssuer = new FidPassportIssuer("your-instance-secret-key");
 // 1. Generate challenge for user
 const challenge = challengeMgr.createChallenge("alice", "sudorecords.scobrudot.dev");
 
-// 2. Client signs `${username}:${nonce}` with its Zen SEA private key
+// 2. Client signs `${username}:${nonce}` with its private key
 const signature = await signPayload(`alice:${challenge.nonce}`, aliceMasterPrivKey);
 
 // 3. Verify the signature and consume the one-time challenge nonce
@@ -197,7 +197,7 @@ if (isValid) {
 ```typescript
 import { deriveApIdentity, createZenMasterKeySource } from "fid";
 
-// Derives instance-specific Ed25519 keypair & WebFinger handle from Zen SEA master key
+// Derives instance-specific Ed25519 keypair & WebFinger handle from master key
 const zenSource = createZenMasterKeySource(masterPrivKey, zenPubKey);
 const apIdentity = deriveApIdentity(zenSource, "tunecamp.org", "alice");
 

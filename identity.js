@@ -1,20 +1,58 @@
 /**
- * FID identity: the one canonical alias + passphrase -> Zen keypair derivation.
- * Shared by FID, smollog, ZenVault and ZenOS so one login is one `pub` everywhere.
- * Dependency-free: pass in the ZEN constructor you already loaded.
+ * FID identity: the one canonical alias + passphrase -> Ed25519 keypair derivation.
+ * Shared by FID and every app that wants one login to be one `pub`.
+ * Dependency-free: WebCrypto only (browsers, Node >= 20).
  *
- * Browser: import { deriveMasterPair } from 'https://cdn.jsdelivr.net/gh/scobru/fid@7887fc3468a77943da8ef18a70c3936d1dc45a2a/identity.js';
+ * `pub` and `priv` are base64url (the JWK `x` and `d` of an Ed25519 key, 32 raw bytes each) —
+ * the same encoding src/crypto/sea.ts uses on the server, so signatures made here verify there.
  *
- * The rule is the portal's: seed = alias.trim() + ':' + passphrase.trim(). Both parts are case-sensitive.
- * Changing it re-keys every FID identity, so it is pinned by tests/identity.test.mjs.
+ * The rule: seed = alias.trim() + ':' + passphrase.trim() (both case-sensitive), stretched with
+ * PBKDF2-SHA256. Changing it re-keys every FID identity, so it is pinned by tests/identity.test.mjs.
  */
+const SEED_SALT = 'fid:master:ed25519:v1';
+const SEED_ITERATIONS = 210000;
+// PKCS#8 header for an Ed25519 private key; the 32-byte seed follows.
+const PKCS8_HEADER = Uint8Array.from([0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20]);
+
+const b64u = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+
 export function identitySeed(alias, passphrase) {
   const a = String(alias ?? '').trim(), p = String(passphrase ?? '').trim();
   if (!a || !p) throw new Error('alias and passphrase are required');
   return a + ':' + p;
 }
 
-/** @returns {Promise<{pub:string, priv:string}>} the Zen SEA keypair for this alias + passphrase */
-export function deriveMasterPair(ZEN, alias, passphrase) {
-  return ZEN.pair(null, { seed: identitySeed(alias, passphrase) });
+async function importSeed(seed) {
+  const der = new Uint8Array(PKCS8_HEADER.length + 32);
+  der.set(PKCS8_HEADER);
+  der.set(seed, PKCS8_HEADER.length);
+  return crypto.subtle.importKey('pkcs8', der, 'Ed25519', true, ['sign']);
+}
+
+async function pairFromSeed(seed) {
+  const jwk = await crypto.subtle.exportKey('jwk', await importSeed(seed));
+  return { pub: jwk.x, priv: jwk.d };
+}
+
+/** @returns {Promise<{pub:string, priv:string}>} the identity keypair for this alias + passphrase */
+export async function deriveMasterPair(alias, passphrase) {
+  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(identitySeed(alias, passphrase)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: new TextEncoder().encode(SEED_SALT), iterations: SEED_ITERATIONS, hash: 'SHA-256' },
+    material,
+    256,
+  );
+  return pairFromSeed(new Uint8Array(bits));
+}
+
+/** @returns {Promise<{pub:string, priv:string}>} a fresh random identity keypair */
+export function generatePair() {
+  return pairFromSeed(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+/** Detached base64url Ed25519 signature of `data` (UTF-8). Verifiable by verifySignature in src/crypto/sea.ts. */
+export async function signData(data, priv) {
+  const key = await importSeed(unb64u(priv));
+  return b64u(new Uint8Array(await crypto.subtle.sign('Ed25519', key, new TextEncoder().encode(data))));
 }
