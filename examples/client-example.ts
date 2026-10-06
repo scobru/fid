@@ -10,8 +10,8 @@ import {
 
 const INSTANCE_DOMAIN = 'sudorecords.scobrudot.dev';
 const USERNAME = 'alice';
-const MASTER_PRIV_KEY = 'your-zen-sea-private-key';
-const ZEN_PUB_KEY = 'your-zen-pub-key';
+const MASTER_PRIV_KEY = 'your-identity-private-key';
+const ZEN_PUB_KEY = 'your-identity-pub-key';
 
 // ---------------------------------------------------------------------------
 // 1. Cross-Instance Passport Linking (FID Registry Flow)
@@ -29,10 +29,10 @@ async function linkInstancePassport(artistName: string = 'Alice & The Echoes') {
   const { challenge } = await challengeRes.json();
   console.log('Received challenge:', challenge);
 
-  // Step B: Sign challenge key (${username}:${nonce}) with Zen SEA private key
+  // Step B: Sign challenge key (${username}:${nonce}) with the identity private key
   const challengePayload = `${challenge.username}:${challenge.nonce}`;
   const signature = await signPayload(challengePayload, MASTER_PRIV_KEY);
-  console.log('Signed challenge with Zen SEA private key');
+  console.log('Signed challenge with the identity private key');
 
   // Step C: Submit signed challenge to instance link endpoint
   const linkRes = await fetch(`https://${INSTANCE_DOMAIN}/api/auth/zen/link`, {
