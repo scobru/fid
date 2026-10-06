@@ -23,7 +23,21 @@ export function identitySeed(alias, passphrase) {
   return a + ':' + p;
 }
 
+const BAD_KEY = 'invalid identity key: expected 32 bytes (a key left over from the old Zen-based identity?)';
+
+/** A stored key as bytes, or a readable error instead of whatever atob throws. */
+function keyBytes(s) {
+  try {
+    return unb64u(String(s));
+  } catch {
+    throw new Error(BAD_KEY);
+  }
+}
+
 async function importSeed(seed) {
+  if (!(seed instanceof Uint8Array) || seed.length !== 32) {
+    throw new Error(BAD_KEY);
+  }
   const der = new Uint8Array(PKCS8_HEADER.length + 32);
   der.set(PKCS8_HEADER);
   der.set(seed, PKCS8_HEADER.length);
@@ -46,6 +60,18 @@ export async function deriveMasterPair(alias, passphrase) {
   return pairFromSeed(new Uint8Array(bits));
 }
 
+/**
+ * True only if `pair.priv` is an Ed25519 seed and `pair.pub` is the key it produces. Rejects what an
+ * older (Zen SEA) identity left in storage: those strings are not Ed25519 keys, or not each other's.
+ */
+export async function isValidPair(pair) {
+  try {
+    return !!pair && (await pairFromSeed(unb64u(pair.priv))).pub === pair.pub;
+  } catch {
+    return false;
+  }
+}
+
 /** @returns {Promise<{pub:string, priv:string}>} a fresh random identity keypair */
 export function generatePair() {
   return pairFromSeed(crypto.getRandomValues(new Uint8Array(32)));
@@ -53,6 +79,6 @@ export function generatePair() {
 
 /** Detached base64url Ed25519 signature of `data` (UTF-8). Verifiable by verifySignature in src/crypto/sea.ts. */
 export async function signData(data, priv) {
-  const key = await importSeed(unb64u(priv));
+  const key = await importSeed(keyBytes(priv));
   return b64u(new Uint8Array(await crypto.subtle.sign('Ed25519', key, new TextEncoder().encode(data))));
 }

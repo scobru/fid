@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.0.1] - 2026-10-06
+
+### Fixed
+
+- **A browser still holding a pre-5.0 (Zen SEA) identity failed on its first signature with `RangeError: offset is out of bounds`.** The portal and relying pages reload the saved key from `localStorage`, and the old Zen strings are not Ed25519 seeds. `importSeed` now rejects a key that is not exactly 32 bytes with a readable message, and the new `isValidPair(pair)` (in `identity.js`) checks that `priv` is a seed and `pub` is the key it produces. The portal uses it to discard a legacy session, tell the user, and start from fresh keys instead of throwing.
+
 ## [5.0.0] - 2026-10-06
 
 ### ⚠️ Breaking

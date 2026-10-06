@@ -902,7 +902,7 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
 
     <!-- Core FID Web Script -->
     <script type="module">
-        import { deriveMasterPair, generatePair, signData } from './identity.js';
+        import { deriveMasterPair, generatePair, signData, isValidPair } from './identity.js';
         import { resolveRedirectUri } from './dist/src/sso/redirect.js';
 
         // State
@@ -1003,11 +1003,20 @@ app.listen(3000, () => console.log('Server FID attivo su porta 3000'));</code></
             const savedPriv = localStorage.getItem("fid_master_priv_key");
             const savedPub = localStorage.getItem("fid_zen_pub_key");
 
-            if (savedAlias && savedPriv && savedPub) {
+            if (savedAlias && savedPriv && savedPub && await isValidPair({ pub: savedPub, priv: savedPriv })) {
                 currentAlias = savedAlias;
                 currentKeys = { pub: savedPub, priv: savedPriv };
             } else {
+                // Keys saved by the old Zen-based portal are not Ed25519 keys: drop them and start
+                // clean instead of failing on the first signature.
+                const legacy = !!(savedPriv || savedPub);
+                ["fid_user_alias", "fid_master_priv_key", "fid_zen_pub_key", "fid_zen_pair"].forEach((k) => localStorage.removeItem(k));
                 await generateRandomKeypair();
+                if (legacy) {
+                    alert(currentLang === 'en'
+                        ? "Your previous identity used the old Zen SEA system, which is no longer supported. New keys were created: sign in again with your alias and passphrase. It will be a new identity, different from the old one."
+                        : "La tua identità precedente usava il vecchio sistema Zen SEA, che non è più supportato. Ho creato chiavi nuove: accedi di nuovo con alias e passphrase. Sarà una nuova identità, diversa dalla precedente.");
+                }
             }
 
             updateDashboardUI();
