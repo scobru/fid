@@ -7,7 +7,7 @@ This directory demonstrates a client-server interaction using FID protocol for f
 - Communicates with clients via WebSocket or REST
 
 ## Client-Side
-- Signs challenges with Zen SEA key
+- Signs challenges with the identity key
 - Retrieves SSO tokens
 - Manages deterministic identity
 
